@@ -1,0 +1,10 @@
+---
+description: Unit and integration testing expectations, mocking conventions, and coverage
+globs: tests/**/*,**/*.test.ts,**/*.spec.ts
+---
+
+# Testing Patterns & Expectations
+
+- Always write unit tests covering happy paths and edge cases for new features.
+- Never make real network requests or connect to live databases in unit tests; mock external dependencies.
+- Verify API error contracts conform to standard error codes and RFC 7807 formats.

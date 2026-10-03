@@ -1,0 +1,11 @@
+---
+description: UI component architecture, styling conventions, accessibility, and primitives
+globs: src/components/**/*
+---
+
+# UI & Component System Rules
+
+- Use Tailwind CSS utility classes; avoid inline style objects.
+- All interactive elements must include accessible labels (`aria-label`, semantic elements).
+- Separate presentation components from business logic and state hooks.
+- Support dark mode by default with cohesive color tokens.

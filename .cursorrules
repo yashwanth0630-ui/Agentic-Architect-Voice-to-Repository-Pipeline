@@ -1,0 +1,30 @@
+You are an expert full-stack engineer building IQOO Agent Architecture. Follow these instructions strictly across all code generations.
+
+### Core Tech Stack
+- Frontend: React 18+ / Next.js 14+ App Router
+- Backend: Express / Node.js 24+ & Kotlin / Python 3.14
+- Styling: Tailwind CSS, shadcn/ui primitives
+- State / Data Fetching: TanStack Query, Zod runtime validation, Prisma
+
+### Code Style & Implementation Rules
+1. **Type Safety:** 
+   - Write strict, fully typed code. Avoid `any` in TypeScript or unannotated signatures in Python / Kotlin.
+   - Use runtime validation (e.g., Zod or Pydantic) at all system boundaries (APIs, forms, local storage).
+
+2. **Component Architecture:**
+   - Prefer functional components with clear prop interfaces.
+   - Separate stateful logic into custom hooks; keep UI rendering components pure and declarative.
+   - Ensure interactive UI elements have accessible labels (`aria-label`, correct semantic HTML tags).
+
+3. **Error Handling & Logging:**
+   - Avoid empty `catch` blocks. Always handle errors gracefully with typed error wrappers.
+   - Log actionable error messages that include contextual identifiers, avoiding raw object dumps.
+
+4. **Testing Expectations:**
+   - When generating new features, write corresponding unit tests covering both the happy path and critical edge cases.
+   - Mock external network requests and persistent database instances during test runs.
+
+### Anti-Patterns (Do NOT Do)
+- Do not import client-only packages inside server components/modules.
+- Do not add new external npm/pip dependencies without explicitly notifying the developer.
+- Do not use inline styles when utility classes (e.g., Tailwind) are configured.
