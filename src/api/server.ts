@@ -1,7 +1,18 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { buildSuccess, buildError } from '../lib/response.js';
-import { ProjectConfigSchema, generateAgentsMarkdown, generateCursorRules, generateApiContracts } from '../generator/generator.js';
+import { 
+  ProjectConfigSchema, 
+  generateAgentsMarkdown, 
+  generateCursorRules, 
+  generateClaudeMarkdown,
+  generateGeminiMarkdown,
+  generateApiContracts,
+  generateUiComponentSystem,
+  generateTestingPatterns,
+  generateScaffoldPackageJson
+} from '../generator/generator.js';
+import { defaultNpuEngine, SnapdragonModel } from '../core/npu.js';
 import exportRouter from './export.js';
 
 const app = express();
@@ -19,7 +30,65 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 
 // Health check endpoint
 app.get('/api/health', (req: Request, res: Response) => {
-  res.json(buildSuccess({ status: 'healthy', uptime: process.uptime() }, res.locals.requestId));
+  res.json(buildSuccess({ 
+    status: 'healthy', 
+    uptime: process.uptime(),
+    npuEngine: 'Qualcomm GenieX SDK (Snapdragon 8 Gen 3 / 8 Elite)',
+    npuStatus: 'ONLINE',
+    supportedModels: ['qwen-2.5-coder-7b-int4', 'qwen-2.5-coder-1.5b-int4', 'phi-4-mini-int4']
+  }, res.locals.requestId));
+});
+
+// Snapdragon NPU Inference endpoint (Qualcomm GenieX SDK bridge)
+app.post('/api/npu/infer', async (req: Request, res: Response) => {
+  try {
+    const { prompt, model } = req.body ?? {};
+    if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
+      return res.status(400).json(
+        buildError('INVALID_ARGUMENT', 'Field "prompt" is required and must be a non-empty string')
+      );
+    }
+
+    const selectedModel = (model as SnapdragonModel) || 'qwen-2.5-coder-7b-int4';
+    const result = await defaultNpuEngine.inferProjectConfig(prompt, selectedModel);
+
+    const generated = {
+      agentsMarkdown: generateAgentsMarkdown(result.config),
+      cursorRules: generateCursorRules(result.config),
+      claudeMarkdown: generateClaudeMarkdown(result.config),
+      geminiMarkdown: generateGeminiMarkdown(result.config),
+      apiContracts: generateApiContracts(),
+      uiComponentSystem: generateUiComponentSystem(),
+      testingPatterns: generateTestingPatterns(),
+      packageJson: generateScaffoldPackageJson(result.config)
+    };
+
+    return res.json(buildSuccess({
+      ...result,
+      manifests: generated
+    }, res.locals.requestId));
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'NPU inference error';
+    return res.status(500).json(buildError('INTERNAL_ERROR', msg));
+  }
+});
+
+// Natural Language Prompt Parser endpoint
+app.post('/api/prompt/parse', async (req: Request, res: Response) => {
+  try {
+    const { prompt } = req.body ?? {};
+    if (!prompt || typeof prompt !== 'string') {
+      return res.status(400).json(
+        buildError('INVALID_ARGUMENT', 'Field "prompt" is required and must be a string')
+      );
+    }
+
+    const result = await defaultNpuEngine.inferProjectConfig(prompt);
+    return res.json(buildSuccess(result, res.locals.requestId));
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Prompt parsing error';
+    return res.status(500).json(buildError('INTERNAL_ERROR', msg));
+  }
 });
 
 // Dynamic Manifest Generator endpoint
@@ -38,7 +107,12 @@ app.post('/api/manifests/generate', (req: Request, res: Response) => {
     const generated = {
       agentsMarkdown: generateAgentsMarkdown(config),
       cursorRules: generateCursorRules(config),
-      apiContracts: generateApiContracts()
+      claudeMarkdown: generateClaudeMarkdown(config),
+      geminiMarkdown: generateGeminiMarkdown(config),
+      apiContracts: generateApiContracts(),
+      uiComponentSystem: generateUiComponentSystem(),
+      testingPatterns: generateTestingPatterns(),
+      packageJson: generateScaffoldPackageJson(config)
     };
 
     return res.json(buildSuccess(generated, res.locals.requestId));

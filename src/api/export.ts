@@ -5,7 +5,12 @@ import {
   ProjectConfigSchema,
   generateAgentsMarkdown,
   generateCursorRules,
+  generateClaudeMarkdown,
+  generateGeminiMarkdown,
   generateApiContracts,
+  generateUiComponentSystem,
+  generateTestingPatterns,
+  generateScaffoldPackageJson,
   type ProjectConfig
 } from '../generator/generator.js';
 
@@ -20,7 +25,12 @@ const router = Router();
  * Returns a `bundle.zip` containing:
  *   AGENTS.md
  *   .cursorrules
+ *   CLAUDE.md
+ *   GEMINI.md
+ *   package.json
  *   skills/api-contracts.md
+ *   skills/ui-component-system.md
+ *   skills/testing-patterns.md
  *
  * The archive is built entirely in-memory via Node streams —
  * nothing is written to a temp directory on the server.
@@ -48,7 +58,12 @@ router.post('/export', (req: Request, res: Response) => {
     // ── 2. Generate manifest contents from templates ──
     const agentsMd = generateAgentsMarkdown(config);
     const cursorRules = generateCursorRules(config);
+    const claudeMd = generateClaudeMarkdown(config);
+    const geminiMd = generateGeminiMarkdown(config);
+    const packageJson = generateScaffoldPackageJson(config);
     const apiContracts = generateApiContracts();
+    const uiComponentSystem = generateUiComponentSystem();
+    const testingPatterns = generateTestingPatterns();
 
     // ── 3. Set response headers for a downloadable zip ──
     res.setHeader('Content-Type', 'application/zip');
@@ -80,7 +95,12 @@ router.post('/export', (req: Request, res: Response) => {
     // ── 5. Append generated files to the archive ──
     archive.append(agentsMd, { name: 'AGENTS.md' });
     archive.append(cursorRules, { name: '.cursorrules' });
+    archive.append(claudeMd, { name: 'CLAUDE.md' });
+    archive.append(geminiMd, { name: 'GEMINI.md' });
+    archive.append(packageJson, { name: 'package.json' });
     archive.append(apiContracts, { name: 'skills/api-contracts.md' });
+    archive.append(uiComponentSystem, { name: 'skills/ui-component-system.md' });
+    archive.append(testingPatterns, { name: 'skills/testing-patterns.md' });
 
     // Signals that no more entries will be added; flushes and closes.
     archive.finalize();

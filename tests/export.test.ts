@@ -21,6 +21,17 @@ describe('POST /api/export — Green Light Desktop Handoff', () => {
     // Zip magic bytes: PK (0x50 0x4b)
     expect(res.body[0]).toBe(0x50);
     expect(res.body[1]).toBe(0x4b);
+
+    // Verify all manifests and skills are present in the zip header
+    const rawZipString = (res.body as Buffer).toString('latin1');
+    expect(rawZipString).toContain('AGENTS.md');
+    expect(rawZipString).toContain('.cursorrules');
+    expect(rawZipString).toContain('CLAUDE.md');
+    expect(rawZipString).toContain('GEMINI.md');
+    expect(rawZipString).toContain('skills/api-contracts.md');
+    expect(rawZipString).toContain('skills/ui-component-system.md');
+    expect(rawZipString).toContain('skills/testing-patterns.md');
+    expect(rawZipString).toContain('package.json');
   });
 
   it('returns a valid zip with custom project config', async () => {

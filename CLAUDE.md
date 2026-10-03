@@ -1,14 +1,13 @@
 # Claude Code Guidelines - IQOO Agent Architecture
 
 ## Project Overview
-Universal Agent Architecture Manifest, Dynamic Template Generator, and Multi-Agent Orchestration Platform.
+Universal AI Agent Architecture Manifest, Generator, and Multi-Agent Orchestrator
 
 ## Standard Commands
 - Build & Run Dev: `npm run dev`
 - Tests: `npm test`
 - Lint: `npm run lint`
-- Generate Manifests: `npm run generate`
-- Repomix Pack: `npx repomix`
+- Install: `npm install`
 
 ## Architecture & Code Style
 - **Type Safety**: Full TypeScript strict mode. Runtime schema validation with Zod.

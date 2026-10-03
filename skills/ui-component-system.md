@@ -8,7 +8,7 @@
 
 2. **Component Composition**:
    - Prefer functional components with explicit TypeScript interfaces for props (`interface ButtonProps { ... }`).
-   - Keep presentational components pure and stateless; extract stateful logic and data queries into custom hooks (e.g., `useManifestGenerator`).
+   - Keep presentational components pure and stateless; extract stateful logic and data queries into custom hooks.
    - Reusable primitives live in `src/components/ui/` (buttons, inputs, cards, dialogs).
    - Domain composite widgets live in `src/components/features/`.
 

@@ -1,7 +1,7 @@
 # Gemini & Antigravity Instructions - IQOO Agent Architecture
 
 ## Project Context
-Universal Agent Architecture Manifest, Generator, and Multi-Agent Orchestrator.
+Universal AI Agent Architecture Manifest, Generator, and Multi-Agent Orchestrator
 
 ## Architectural Guidelines
 - **Modularity**: Code organized into `src/api/`, `src/core/`, `src/components/`, `src/lib/`, and `src/generator/`.

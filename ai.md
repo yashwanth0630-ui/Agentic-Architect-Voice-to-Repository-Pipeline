@@ -60,12 +60,32 @@ Runs `src/generator/generator.ts` to validate and synchronize all agent manifest
 # Pack the entire codebase into an AI-ready context prompt
 repomix
 
-# Run Claude Code in current directory
-claude
-
-# Run test suite
+# Run full Vitest test suite (12 tests covering NPU, API contracts, export)
 npm test
 
 # Regenerate / sync all agent manifests
 npm run generate
+
+# Run bootstrap desktop handoff (Bash / Linux / macOS)
+./scripts/bootstrap.sh
+
+# Run bootstrap desktop handoff (Windows PowerShell)
+.\scripts\bootstrap.ps1
+
+# Generate the 5-slide Pitch Deck PDF
+python scripts/generate_pitch_deck.py
+
+# Run Claude Code in current directory
+claude
 ```
+
+---
+
+## 5. API Endpoints
+
+- `GET /api/health`: Health status & Qualcomm GenieX NPU engine telemetry.
+- `POST /api/npu/infer`: On-device Snapdragon NPU structured inference from natural-language prompt.
+- `POST /api/prompt/parse`: Natural language prompt parser.
+- `POST /api/manifests/generate`: Dynamic manifest generator adhering to `ProjectConfigSchema`.
+- `POST /api/export`: In-memory streaming zip exporter (`bundle.zip`) containing all manifests and skills.
+

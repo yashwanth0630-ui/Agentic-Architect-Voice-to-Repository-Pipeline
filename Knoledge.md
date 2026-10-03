@@ -53,7 +53,34 @@ This repository implements the standardized Universal Agent Architecture, ensuri
 
 ---
 
-## 5. Security & Boundary Guardrails
-- **Zero Secret Ingestion**: All credentials, tokens, and keys must stay in `.env` (excluded by `.gitignore` and `repomix`).
-- **Non-Destructive Operations**: Prohibit automated execution of `git push --force`, `git reset --hard`, and `rm -rf`.
-- **Lockfile Integrity**: Agents must never manually edit lockfiles (`package-lock.json`, `pnpm-lock.yaml`, `poetry.lock`).
+---
+
+## 6. Agentic Architect: Voice-to-Repository Pipeline
+
+```text
+┌────────────────────────────────┐     ┌────────────────────────────────┐     ┌────────────────────────────────┐
+│ 1. Mobile Layer (iQOO 13)      │     │ 2. Core Manifest Engine        │     │ 3. Desktop Handoff & Auto-Boot │
+│ • Voice Prompt Ingestion       │ ──> │ • Strict Zod & RFC 7807 Rules  │ ──> │ • iQOO Office Kit Folder Sync  │
+│ • Hexagon NPU (45 TOPS)        │     │ • Full Manifest Pyramid        │     │ • bootstrap.sh / .ps1 Unpack   │
+│ • Qwen 2.5 / Phi-4 INT4        │     │ • bundle.zip In-Memory Stream  │     │ • npm install & Auto-Boot IDE  │
+│ • 100% Offline (GenieX SDK)    │     │ • Kotlin & TypeScript Writers  │     │ • Instant Multi-Agent Priming  │
+└────────────────────────────────┘     └────────────────────────────────┘     └────────────────────────────────┘
+```
+
+### The 4 Execution Phases
+1. **Input & On-Device Processing (Mobile Layer)**:
+   - Voice audio captured on iQOO Android interface.
+   - Snapdragon NPU offload via Qualcomm GenieX SDK (INT4 quantization).
+   - Constrained grammar decoding ensures output complies with typed `ProjectConfigSchema`.
+2. **Manifest Generation & Packaging (Core Engine)**:
+   - Assembles `AGENTS.md`, `.cursorrules`, `CLAUDE.md`, `GEMINI.md`, and domain `skills/`.
+   - Packages into `bundle.zip` through Express `POST /api/export` or Kotlin file writer.
+3. **Desktop Handoff & Auto-Boot (Laptop Execution)**:
+   - Synchronized over local Wi-Fi/Bluetooth via iQOO Office Kit shared folders or HTTP.
+   - `bootstrap.sh` extracts files, hydrates dependencies with `npm install`, and boots Cursor/VS Code.
+   - Primed agents immediately adopt workspace rules.
+4. **Final Submission Artifacts**:
+   - Monorepo repository with Express server, Kotlin generator, and 100% passing Vitest suite.
+   - `ManifestViewer.tsx` interactive console.
+   - `Agentic_Architect_Pitch_Deck.pdf` 5-slide executive presentation.
+

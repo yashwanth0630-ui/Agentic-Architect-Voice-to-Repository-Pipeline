@@ -96,6 +96,40 @@ export function generateCursorRules(config: ProjectConfig): string {
 `;
 }
 
+export function generateClaudeMarkdown(config: ProjectConfig): string {
+  return `# Claude Code Guidelines - ${config.projectName}
+
+## Project Overview
+${config.description}
+
+## Standard Commands
+- Build & Run Dev: \`${config.devCommand}\`
+- Tests: \`${config.testCommand}\`
+- Lint: \`${config.lintCommand}\`
+- Install: \`${config.installCommand}\`
+
+## Architecture & Code Style
+- **Type Safety**: Full TypeScript strict mode. Runtime schema validation with Zod.
+- **API Contracts**: All API responses use \`{ success: true, data: ..., meta: ... }\` or RFC 7807 error format.
+- **Security**: Never hardcode secrets. Read strictly from environment variables.
+- **Safety**: Do not execute destructive Git operations (\`git reset --hard\`, \`git push --force\`) or recursive deletions.
+`;
+}
+
+export function generateGeminiMarkdown(config: ProjectConfig): string {
+  return `# Gemini & Antigravity Instructions - ${config.projectName}
+
+## Project Context
+${config.description}
+
+## Architectural Guidelines
+- **Modularity**: Code organized into \`src/api/\`, \`src/core/\`, \`src/components/\`, \`src/lib/\`, and \`src/generator/\`.
+- **Validation**: Strict schema validation with Zod on all payloads.
+- **API Contracts**: Follow RFC 7807 and success envelope defined in \`skills/api-contracts.md\`.
+- **Guardrails**: No editing generated artifacts directly, no destructive commands.
+`;
+}
+
 export function generateApiContracts(): string {
   return `# Skill: API Design & Error Contracts
 
@@ -132,6 +166,87 @@ All JSON responses from internal endpoints must conform to this schema:
 `;
 }
 
+export function generateUiComponentSystem(): string {
+  return `# Skill: UI & Design Component System
+
+## Architectural Principles
+1. **Design System & Styling**:
+   - Use utility classes via Tailwind CSS or CSS variables.
+   - Absolutely no raw inline style objects (\`style={{...}}\`) except for dynamic CSS transforms or container queries.
+   - Support dark mode by default (\`dark:\` variant or system preference tokens).
+
+2. **Component Composition**:
+   - Prefer functional components with explicit TypeScript interfaces for props (\`interface ButtonProps { ... }\`).
+   - Keep presentational components pure and stateless; extract stateful logic and data queries into custom hooks.
+   - Reusable primitives live in \`src/components/ui/\` (buttons, inputs, cards, dialogs).
+   - Domain composite widgets live in \`src/components/features/\`.
+
+3. **Accessibility (a11y)**:
+   - Provide explicit \`aria-label\` or \`aria-labelledby\` attributes for icon-only buttons and interactive controls.
+   - Ensure keyboard navigability (\`Tab\`, \`Escape\`, \`Enter\`, \`Space\`) on all modal/dropdown dialogs.
+   - Semantic HTML: Use \`<header>\`, \`<main>\`, \`<section>\`, \`<nav>\`, \`<article>\`, \`<button>\` instead of clickable \`<div>\` elements.
+
+4. **Animations & Polish**:
+   - Micro-interactions on buttons, hovers, active states, and transitions (e.g. \`transition-all duration-200 ease-in-out\`).
+   - Loading skeletons and optimistic UI updates for async operations.
+`;
+}
+
+export function generateTestingPatterns(): string {
+  return `# Skill: Testing Patterns & Quality Expectations
+
+## Core Testing Philosophy
+- Every new feature, endpoint, or utility must be paired with unit and integration tests.
+- High test coverage on domain rules (\`src/core/\`) and schema validators (\`src/api/\`).
+- Fast test execution via Vitest / Jest.
+
+## Unit Testing Rules
+1. **Purity & Isolation**:
+   - Unit tests must run without external network access or live databases.
+   - Mock all network requests and file system writes where appropriate.
+2. **Naming Convention**:
+   - Test files live alongside modules or in \`tests/\`: \`*.test.ts\` or \`*.spec.ts\`.
+   - Describe blocks: \`describe('ManifestGenerator', () => { it('should generate valid AGENTS.md given project config', () => {}) })\`.
+3. **Edge Case Coverage**:
+   - Validate empty inputs, oversized strings, invalid characters, and schema boundary violations.
+   - Test error throwing and rejection handling explicitly.
+
+## Integration Testing Rules
+1. **API Contracts**:
+   - Verify every endpoint produces the RFC 7807 error format or the unified success payload:
+     \`{ success: true, data: ..., meta: { timestamp, requestId } }\`.
+2. **Idempotency**:
+   - Repeated calls to manifest generation or schema validation must produce consistent, reproducible output.
+`;
+}
+
+export function generateScaffoldPackageJson(config: ProjectConfig): string {
+  const pkgName = config.projectName.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+  return JSON.stringify(
+    {
+      name: pkgName,
+      version: '0.1.0',
+      description: config.description,
+      private: true,
+      scripts: {
+        dev: config.devCommand.replace(/^npm run /, ''),
+        build: 'tsc',
+        lint: config.lintCommand.replace(/^npm run /, ''),
+        test: config.testCommand.replace(/^npm test/, 'vitest run')
+      },
+      dependencies: {
+        zod: '^3.24.2'
+      },
+      devDependencies: {
+        typescript: '^5.8.2',
+        vitest: '^3.0.7'
+      }
+    },
+    null,
+    2
+  );
+}
+
 export function syncAllManifests(targetDir: string = process.cwd(), overrides: Partial<ProjectConfig> = {}) {
   const config = ProjectConfigSchema.parse(overrides);
   const skillsDir = path.join(targetDir, 'skills');
@@ -142,7 +257,11 @@ export function syncAllManifests(targetDir: string = process.cwd(), overrides: P
 
   fs.writeFileSync(path.join(targetDir, 'AGENTS.md'), generateAgentsMarkdown(config), 'utf-8');
   fs.writeFileSync(path.join(targetDir, '.cursorrules'), generateCursorRules(config), 'utf-8');
+  fs.writeFileSync(path.join(targetDir, 'CLAUDE.md'), generateClaudeMarkdown(config), 'utf-8');
+  fs.writeFileSync(path.join(targetDir, 'GEMINI.md'), generateGeminiMarkdown(config), 'utf-8');
   fs.writeFileSync(path.join(skillsDir, 'api-contracts.md'), generateApiContracts(), 'utf-8');
+  fs.writeFileSync(path.join(skillsDir, 'ui-component-system.md'), generateUiComponentSystem(), 'utf-8');
+  fs.writeFileSync(path.join(skillsDir, 'testing-patterns.md'), generateTestingPatterns(), 'utf-8');
 
   console.log(`[ManifestGenerator] Successfully synchronized AI agent files to: ${targetDir}`);
 }
@@ -151,3 +270,4 @@ export function syncAllManifests(targetDir: string = process.cwd(), overrides: P
 if (require.main === module) {
   syncAllManifests();
 }
+
