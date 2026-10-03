@@ -12,18 +12,24 @@ export const ManifestViewer: React.FC<ManifestViewerProps> = ({
   onSave
 }) => {
   const [activeTab, setActiveTab] = useState<'agents' | 'cursor'>('agents');
-  const [agentsContent, setAgentsContent] = useState(initialAgentsContent);
-  const [cursorContent, setCursorContent] = useState(initialCursorRules);
-  const [copied, setCopied] = useState(false);
+  const [agentsContent, setAgentsContent] = useState<string>(initialAgentsContent);
+  const [cursorContent, setCursorContent] = useState<string>(initialCursorRules);
+  const [copied, setCopied] = useState<boolean>(false);
 
-  const handleCopy = async () => {
+  const handleCopy = async (): Promise<void> => {
     const textToCopy = activeTab === 'agents' ? agentsContent : cursorContent;
-    await navigator.clipboard.writeText(textToCopy);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      try {
+        await navigator.clipboard.writeText(textToCopy);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (err) {
+        console.error('Failed to copy to clipboard', err);
+      }
+    }
   };
 
-  const handleSave = () => {
+  const handleSave = (): void => {
     if (onSave) {
       onSave(activeTab, activeTab === 'agents' ? agentsContent : cursorContent);
     }
@@ -79,7 +85,7 @@ export const ManifestViewer: React.FC<ManifestViewerProps> = ({
           id="manifest-editor"
           aria-label={`${activeTab === 'agents' ? 'AGENTS.md' : '.cursorrules'} content`}
           value={activeTab === 'agents' ? agentsContent : cursorContent}
-          onChange={(e) =>
+          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
             activeTab === 'agents' ? setAgentsContent(e.target.value) : setCursorContent(e.target.value)
           }
           rows={16}
@@ -113,4 +119,5 @@ export const ManifestViewer: React.FC<ManifestViewerProps> = ({
     </section>
   );
 };
+
 export default ManifestViewer;
