@@ -1,0 +1,23 @@
+{
+  "mcpServers": {
+    "agentic-architect": {
+      "command": "cmd.exe",
+      "args": [
+        "/c",
+        "npx",
+        "tsx",
+        "C:\\Users\\SafetyProtocol\\Desktop\\IQOO\\src\\mcp\\server.ts"
+      ]
+    },
+    "filesystem": {
+      "command": "cmd.exe",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "C:\\Users\\SafetyProtocol\\Desktop\\IQOO"
+      ]
+    }
+  }
+}
