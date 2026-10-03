@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { RoseOrbit } from './core/rose-orbit';
+import { TextShimmer } from './core/text-shimmer';
 
 export type ManifestTab = 
   | 'agents' 
@@ -193,10 +195,12 @@ export const ManifestViewer: React.FC<ManifestViewerProps> = ({
             className="px-4 py-2 rounded-lg text-xs font-semibold bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 shadow-md transition-all flex items-center justify-center gap-2 font-mono"
           >
             {isInferring ? (
-              <>
-                <span className="animate-spin inline-block w-3 h-3 border-2 border-slate-950 border-t-transparent rounded-full" />
-                <span>NPU Inferring...</span>
-              </>
+              <div className="flex items-center gap-2">
+                <RoseOrbit size={18} color="#000000" particleCount={24} />
+                <TextShimmer className="font-mono text-xs text-slate-950 font-bold" duration={1}>
+                  Generating code...
+                </TextShimmer>
+              </div>
             ) : (
               <>
                 <span>⚡ Run On-Device NPU</span>
@@ -226,23 +230,39 @@ export const ManifestViewer: React.FC<ManifestViewerProps> = ({
         ))}
       </nav>
 
-      {/* Code Editor Body */}
-      <main className="p-4 sm:p-6 bg-slate-950">
-        <label htmlFor="active-manifest-content" className="sr-only">
-          {activeTab} Content
-        </label>
-        <textarea
-          id="active-manifest-content"
-          aria-label={`${activeTab} manifest content`}
-          value={manifests[activeTab]}
-          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
-            const val = e.target.value;
-            setManifests((prev) => ({ ...prev, [activeTab]: val }));
-          }}
-          rows={17}
-          spellCheck={false}
-          className="w-full font-mono text-xs sm:text-sm bg-slate-900/90 border border-slate-800 rounded-xl p-4 text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-y leading-relaxed"
-        />
+      {/* Code Editor Body / Inference Overlay */}
+      <main className="p-4 sm:p-6 bg-slate-950 relative min-h-[380px]">
+        {isInferring ? (
+          <div className="flex flex-col items-center justify-center p-8 bg-slate-900/90 rounded-xl border border-orange-500/30 my-2 backdrop-blur-md">
+            <RoseOrbit size={170} color="#ff5722" particleCount={72} />
+            <div className="mt-5 flex flex-col items-center gap-2 text-center">
+              <TextShimmer className="font-mono text-sm text-orange-200 font-semibold tracking-wide" duration={1}>
+                Generating code...
+              </TextShimmer>
+              <div className="text-[11px] font-mono text-slate-400 max-w-md bg-slate-950/70 px-3 py-1.5 rounded-lg border border-slate-800">
+                r(t) = 7.0 - 2.7s cos(7t) &bull; Qualcomm Hexagon NPU (45 TOPS)
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            <label htmlFor="active-manifest-content" className="sr-only">
+              {activeTab} Content
+            </label>
+            <textarea
+              id="active-manifest-content"
+              aria-label={`${activeTab} manifest content`}
+              value={manifests[activeTab]}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
+                const val = e.target.value;
+                setManifests((prev) => ({ ...prev, [activeTab]: val }));
+              }}
+              rows={17}
+              spellCheck={false}
+              className="w-full font-mono text-xs sm:text-sm bg-slate-900/90 border border-slate-800 rounded-xl p-4 text-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-y leading-relaxed"
+            />
+          </>
+        )}
       </main>
 
       {/* Action Footer */}

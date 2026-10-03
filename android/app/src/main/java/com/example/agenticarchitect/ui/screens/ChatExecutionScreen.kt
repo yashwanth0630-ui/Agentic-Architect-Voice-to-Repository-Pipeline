@@ -33,6 +33,9 @@ import com.example.agenticarchitect.generator.MobilePromptIngestionResult
 import com.example.agenticarchitect.theme.*
 import com.example.agenticarchitect.ui.components.CloseChatPill
 import com.example.agenticarchitect.ui.components.EmberBackground
+import com.example.agenticarchitect.ui.components.RoseOrbitLoader
+import com.example.agenticarchitect.ui.components.ShimmerText
+import com.example.agenticarchitect.ui.components.TextShimmerBasic
 import java.io.File
 
 @Composable
@@ -226,23 +229,52 @@ fun ChatExecutionScreen(
                                     color = Color.White
                                 )
 
-                                // Status Badge: "Aris is working..."
+                                // Status Badge: "Aris is working..." / Shimmering Rose Orbit
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     modifier = Modifier.padding(top = 4.dp)
                                 ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(6.dp)
-                                            .background(EmberOrangePrimary.copy(alpha = dotAlpha), CircleShape)
+                                    RoseOrbitLoader(
+                                        size = 22.dp,
+                                        color = EmberOrangePrimary,
+                                        particleCount = 32
                                     )
-                                    Text(
-                                        text = if (isInferring) "Aris is working..." else "Hexagon NPU (45 TOPS) compiled manifests",
+                                    ShimmerText(
+                                        text = if (isInferring) "Generating code on Snapdragon NPU..." else "Hexagon NPU compiled manifests",
                                         fontSize = 11.5.sp,
-                                        color = Color(0xFFC7AAA0)
+                                        durationMs = 1200
                                     )
                                 }
+                            }
+                        }
+
+                        // Rose Orbit Mathematical Curve Engine Card
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(18.dp))
+                                .background(Color(0x3D1A0C06))
+                                .border(1.dp, Color(0x33FFA07A), RoundedCornerShape(18.dp))
+                                .padding(vertical = 14.dp, horizontal = 16.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                RoseOrbitLoader(
+                                    size = 115.dp,
+                                    color = EmberOrangePrimary,
+                                    particleCount = 72
+                                )
+                                TextShimmerBasic()
+                                Text(
+                                    text = "r(t) = 7.0 - 2.7s cos(7t) • Rose Orbit",
+                                    fontSize = 11.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    color = Color(0xFFC7AAA0)
+                                )
                             }
                         }
 
