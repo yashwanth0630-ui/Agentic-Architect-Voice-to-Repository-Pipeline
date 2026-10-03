@@ -4,3 +4,8 @@ dist/
 *.log
 repomix-output.*
 .DS_Store
+.idea/
+*.iml
+.gradle/
+build/
+local.properties

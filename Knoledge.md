@@ -68,10 +68,12 @@ This repository implements the standardized Universal Agent Architecture, ensuri
 ```
 
 ### The 4 Execution Phases
-1. **Input & On-Device Processing (Mobile Layer)**:
-   - Voice audio captured on iQOO Android interface.
-   - Snapdragon NPU offload via Qualcomm GenieX SDK (INT4 quantization).
-   - Constrained grammar decoding ensures output complies with typed `ProjectConfigSchema`.
+1. **Input & On-Device Processing (Mobile Layer - Native Android App in `android/`)**:
+   - Voice audio captured via Android native `SpeechRecognizer` (`VoicePromptManager.kt`).
+   - Single-screen Jetpack Compose UI with large pulsing microphone button (`MainActivity.kt`).
+   - Snapdragon NPU offload via Qualcomm GenieX SDK INT4 quantized inference (`QualcommGenieXNpuEngine.kt`).
+   - Constrained grammar decoding ensures output complies with typed `AgentProjectConfig`.
+   - On-device packaging writing directly to `/sdcard/iQOO_Share/bundle.zip` for iQOO Office Kit transfer.
 2. **Manifest Generation & Packaging (Core Engine)**:
    - Assembles `AGENTS.md`, `.cursorrules`, `CLAUDE.md`, `GEMINI.md`, and domain `skills/`.
    - Packages into `bundle.zip` through Express `POST /api/export` or Kotlin file writer.
