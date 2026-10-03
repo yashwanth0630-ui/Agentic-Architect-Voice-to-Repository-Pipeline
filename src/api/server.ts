@@ -1,5 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import path from 'path';
 import { buildSuccess, buildError } from '../lib/response.js';
 import { 
   ProjectConfigSchema, 
@@ -133,6 +134,21 @@ app.get('/api/internal/status', (req: Request, res: Response) => {
 
 // Green Light Desktop Handoff — zip export pipeline
 app.use('/api', exportRouter);
+
+// Static Web Console & Pitch Deck Delivery
+const projectRoot = process.cwd();
+const publicDir = path.join(projectRoot, 'public');
+
+app.use(express.static(publicDir));
+
+app.get('/pitch-deck.pdf', (req: Request, res: Response) => {
+  const pdfPath = path.join(projectRoot, 'Agentic_Architect_Pitch_Deck.pdf');
+  res.sendFile(pdfPath);
+});
+
+app.get('/', (req: Request, res: Response) => {
+  res.sendFile(path.join(publicDir, 'index.html'));
+});
 
 // 404 handler adhering to RFC 7807 contract
 app.use((req: Request, res: Response) => {

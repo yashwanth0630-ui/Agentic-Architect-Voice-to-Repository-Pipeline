@@ -53,4 +53,31 @@ describe('POST /api/export — Green Light Desktop Handoff', () => {
     expect(res.body[0]).toBe(0x50);
     expect(res.body[1]).toBe(0x4b);
   });
+
+  it('serves the interactive web console at GET /', async () => {
+    const res = await request(app).get('/').expect(200);
+    expect(res.headers['content-type']).toContain('text/html');
+    expect(res.text).toContain('Agentic');
+    expect(res.text).toContain('Qualcomm GenieX SDK');
+  });
+
+  it('serves the pitch deck PDF at GET /pitch-deck.pdf', async () => {
+    const res = await request(app)
+      .get('/pitch-deck.pdf')
+      .buffer(true)
+      .parse((res, callback) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk: Buffer) => chunks.push(chunk));
+        res.on('end', () => callback(null, Buffer.concat(chunks)));
+      })
+      .expect(200);
+
+    expect(res.headers['content-type']).toContain('application/pdf');
+    expect(Buffer.isBuffer(res.body)).toBe(true);
+    // PDF magic bytes: %PDF (0x25 0x50 0x44 0x46)
+    expect(res.body[0]).toBe(0x25);
+    expect(res.body[1]).toBe(0x50);
+    expect(res.body[2]).toBe(0x44);
+    expect(res.body[3]).toBe(0x46);
+  });
 });
