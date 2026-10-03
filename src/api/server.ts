@@ -2,6 +2,7 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { buildSuccess, buildError } from '../lib/response.js';
 import { ProjectConfigSchema, generateAgentsMarkdown, generateCursorRules, generateApiContracts } from '../generator/generator.js';
+import exportRouter from './export.js';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -55,6 +56,9 @@ app.get('/api/internal/status', (req: Request, res: Response) => {
   }
   return res.json(buildSuccess({ internalServices: 'all operational' }, res.locals.requestId));
 });
+
+// Green Light Desktop Handoff — zip export pipeline
+app.use('/api', exportRouter);
 
 // 404 handler adhering to RFC 7807 contract
 app.use((req: Request, res: Response) => {
