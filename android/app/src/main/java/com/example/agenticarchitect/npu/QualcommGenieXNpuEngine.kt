@@ -16,6 +16,7 @@ class QualcommGenieXNpuEngine {
         const val MODEL_QWEN_7B = "Qwen2.5-Coder-7B-Instruct-INT4"
         const val MODEL_QWEN_1_5B = "Qwen2.5-Coder-1.5B-Instruct-INT4"
         const val MODEL_PHI_4 = "Phi-4-Mini-3.8B-Instruct-INT4"
+        const val MODEL_OPUS_4 = "Opus-4.0-Architect-Engine"
     }
 
     /**
@@ -106,8 +107,18 @@ class QualcommGenieXNpuEngine {
             hardwareAccelerator = "Qualcomm Hexagon NPU (45 TOPS)",
             sdk = "Qualcomm GenieX SDK",
             latencyMs = duration,
-            tokensPerSecond = if (selectedModel.contains("1.5B")) 68.4 else 46.2,
-            memoryFootprintMb = if (selectedModel.contains("1.5B")) 1150 else 1850,
+            tokensPerSecond = when {
+                selectedModel.contains("1.5B") -> 68.4
+                selectedModel.contains("Phi") -> 52.8
+                selectedModel.contains("Opus") -> 34.6
+                else -> 46.2
+            },
+            memoryFootprintMb = when {
+                selectedModel.contains("1.5B") -> 1150
+                selectedModel.contains("Phi") -> 1320
+                selectedModel.contains("Opus") -> 2200
+                else -> 1850
+            },
             isOffline = true
         )
 

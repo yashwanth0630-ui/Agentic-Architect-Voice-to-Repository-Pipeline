@@ -103,7 +103,7 @@ fun AgenticArchitectApp() {
         }
     }
 
-    fun startListeningFlow() {
+    fun startListeningFlow(isResume: Boolean = false) {
         val hasPermission = ContextCompat.checkSelfPermission(
             context,
             Manifest.permission.RECORD_AUDIO
@@ -118,7 +118,12 @@ fun AgenticArchitectApp() {
                     Toast.makeText(context, err, Toast.LENGTH_SHORT).show()
                     isListening = false
                 },
-                onListeningStateChange = { state -> isListening = state }
+                onListeningStateChange = { state ->
+                    isListening = state
+                    if (state && isResume) {
+                        Toast.makeText(context, "Listening resumed", Toast.LENGTH_SHORT).show()
+                    }
+                }
             )
         } else {
             permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
@@ -133,10 +138,11 @@ fun AgenticArchitectApp() {
         isInferring = true
         currentScreen = ScreenState.CHAT
 
-        val modelId = if (selectedModel.contains("Phi", ignoreCase = true)) {
-            QualcommGenieXNpuEngine.MODEL_PHI_4
-        } else {
-            QualcommGenieXNpuEngine.MODEL_QWEN_7B
+        val modelId = when {
+            selectedModel.contains("Phi", ignoreCase = true) -> QualcommGenieXNpuEngine.MODEL_PHI_4
+            selectedModel.contains("Qwen", ignoreCase = true) -> QualcommGenieXNpuEngine.MODEL_QWEN_7B
+            selectedModel.contains("Opus", ignoreCase = true) -> QualcommGenieXNpuEngine.MODEL_OPUS_4
+            else -> QualcommGenieXNpuEngine.MODEL_QWEN_7B
         }
 
         val result = npuEngine.inferProjectFromPrompt(promptText, modelId)
@@ -207,8 +213,7 @@ fun AgenticArchitectApp() {
                         isListening = false
                         Toast.makeText(context, "Listening paused", Toast.LENGTH_SHORT).show()
                     } else {
-                        startListeningFlow()
-                        Toast.makeText(context, "Listening resumed", Toast.LENGTH_SHORT).show()
+                        startListeningFlow(isResume = true)
                     }
                 },
                 onSendClick = {

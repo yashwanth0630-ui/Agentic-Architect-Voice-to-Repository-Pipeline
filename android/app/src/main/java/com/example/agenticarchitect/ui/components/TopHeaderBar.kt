@@ -9,7 +9,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,8 +29,7 @@ fun TopHeaderBar(
     subtitle: String = "Welcome back",
     onCloseClick: () -> Unit = {},
     onMoreClick: () -> Unit = {},
-    onTuneClick: () -> Unit = {},
-    onMenuClick: () -> Unit = {},
+    onUserAvatarClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -120,6 +118,7 @@ fun TopHeaderBar(
                     .size(32.dp)
                     .clip(CircleShape)
                     .background(PrimaryContainer)
+                    .clickable { onUserAvatarClick() }
             ) {
                 Icon(
                     imageVector = Icons.Default.Person,

@@ -833,7 +833,7 @@
           body: JSON.stringify({ prompt, model: activeModel })
         });
         const data = await res.json();
-        if (data.success && data.data) {
+        if (res.ok && data?.success && data?.data?.config) {
           const cfg = data.data.config;
           document.getElementById('chatAiResponseText').innerText = 
             `I've initialized the ${cfg.architecture} architecture (${cfg.framework} + ${cfg.database}). Primed for on-device execution with offline Snapdragon NPU acceleration.`;
@@ -849,10 +849,17 @@
             previewManifest('agents');
           }
 
-          document.getElementById('chatContractTitle').innerText = `Contract #${cfg.projectName}`;
+          if (cfg.projectName) {
+            document.getElementById('chatContractTitle').innerText = `Contract #${cfg.projectName}`;
+          }
+        } else {
+          document.getElementById('chatAiResponseText').innerText = 
+            'Unable to generate architecture from NPU inference. Please try again.';
         }
       } catch (err) {
         console.warn('NPU inference API call completed with offline fallback:', err);
+        document.getElementById('chatAiResponseText').innerText = 
+          'Inference connection unavailable. Offline fallback active.';
       } finally {
         document.getElementById('aiWorkingIndicator').innerHTML = `
           <div class="relative flex items-center justify-center w-2.5 h-2.5">
@@ -865,6 +872,7 @@
 
     function previewManifest(key) {
       const preview = document.getElementById('manifestPreviewArea');
+      if (!preview) return;
       if (key === 'agents') {
         preview.value = manifestsCache.agentsMarkdown || `# AGENTS.md\\n\\n## Project Overview\\n- Runtime: Node.js 24.x / TypeScript 5.x\\n- NPU Engine: Qualcomm GenieX SDK`;
       } else if (key === 'cursor') {

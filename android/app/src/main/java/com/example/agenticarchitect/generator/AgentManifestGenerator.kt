@@ -324,16 +324,22 @@ class AgentManifestGenerator {
         
         // 1. Try iQOO Office Kit default path first
         val iqooShareDir = File(Environment.getExternalStorageDirectory(), "iQOO_Share")
+        var iqooShareFile: File? = null
         try {
             if (iqooShareDir.exists() || iqooShareDir.mkdirs()) {
                 val file = File(iqooShareDir, "bundle.zip")
+                iqooShareFile = file
                 FileOutputStream(file).use { fos ->
                     fos.write(bytes)
                 }
                 return file
             }
         } catch (_: Exception) {
-            // Permission or scoped storage denied, proceed to fallback
+            // Delete partially written bundle.zip before proceeding to fallback storage
+            try {
+                iqooShareFile?.let { if (it.exists()) it.delete() }
+            } catch (_: Exception) {
+            }
         }
 
         // 2. Fallback to app external files dir or internal storage

@@ -24,6 +24,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.example.agenticarchitect.theme.*
 import com.example.agenticarchitect.ui.components.CelestialGlowingOrb
 import com.example.agenticarchitect.ui.components.CloseChatPill
@@ -170,10 +172,12 @@ fun VoiceListeningScreen(
                         modifier = Modifier
                             .size(7.dp)
                             .clip(CircleShape)
-                            .background(PrimaryColor.copy(alpha = dotAlpha))
+                            .background(
+                                if (isListening) PrimaryColor.copy(alpha = dotAlpha) else OnSurfaceVariant.copy(alpha = 0.5f)
+                            )
                     )
                     Text(
-                        text = "ADA IS LISTENING...",
+                        text = if (isListening) "ADA IS LISTENING..." else "ADA IS PAUSED",
                         fontSize = 11.sp,
                         fontFamily = FontFamily.Monospace,
                         fontWeight = FontWeight.Bold,
@@ -313,7 +317,8 @@ fun VoiceListeningScreen(
                                     colors = listOf(Color(0xFFE53935), Color(0xFFB71C1C))
                                 )
                             )
-                            .clickable { onSendClick() }
+                            .semantics { contentDescription = "Stop Recording" }
+                            .clickable { onMicToggle() }
                     ) {
                         // Sharp Solid Square Stop Icon
                         Box(

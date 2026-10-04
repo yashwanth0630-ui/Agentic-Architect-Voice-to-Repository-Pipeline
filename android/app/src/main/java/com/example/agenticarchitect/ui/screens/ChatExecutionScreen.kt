@@ -405,8 +405,11 @@ fun ChatExecutionScreen(
                                 .background(SurfaceContainerLow.copy(alpha = 0.95f))
                                 .border(1.dp, Color(0x33FF570B), RoundedCornerShape(16.dp))
                                 .clickable {
-                                    isLaunched = !isLaunched
-                                    onPackageZipClick()
+                                    val willLaunch = !isLaunched
+                                    isLaunched = willLaunch
+                                    if (willLaunch) {
+                                        onPackageZipClick()
+                                    }
                                 }
                                 .padding(14.dp)
                         ) {
@@ -442,8 +445,11 @@ fun ChatExecutionScreen(
                                                 if (isLaunched) Color(0x3310B981) else PrimaryContainer.copy(alpha = 0.15f)
                                             )
                                             .clickable {
-                                                isLaunched = !isLaunched
-                                                onPackageZipClick()
+                                                val willLaunch = !isLaunched
+                                                isLaunched = willLaunch
+                                                if (willLaunch) {
+                                                    onPackageZipClick()
+                                                }
                                             }
                                             .padding(horizontal = 8.dp, vertical = 2.dp)
                                     ) {
@@ -532,8 +538,9 @@ fun ChatExecutionScreen(
                                     .clip(CircleShape)
                                     .background(PrimaryColor.copy(alpha = dotAlpha))
                             )
+                            val statusPrefix = if (isInferring) "Ada is processing..." else "Ada is ready"
                             Text(
-                                text = "Ada is ready • Snapdragon Hexagon NPU",
+                                text = "$statusPrefix • Snapdragon Hexagon NPU",
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.Normal,
                                 color = OnSurfaceVariant
