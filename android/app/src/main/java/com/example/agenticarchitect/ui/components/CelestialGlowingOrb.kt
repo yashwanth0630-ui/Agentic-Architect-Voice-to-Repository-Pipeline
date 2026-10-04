@@ -2,12 +2,19 @@ package com.example.agenticarchitect.ui.components
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -117,6 +124,34 @@ fun CelestialGlowingOrb(
                 ),
                 radius = orbRadius * 0.45f,
                 center = Offset(orbRadius * 0.65f, orbRadius * 0.55f)
+            )
+        }
+
+        // 3. Central Rotating Gyro Wave Core (Matching Stitch Design)
+        val gyroRotation by infiniteTransition.animateFloat(
+            initialValue = 0f,
+            targetValue = 360f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(8000, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart
+            ),
+            label = "gyro_spin"
+        )
+
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(size * 0.32f)
+                .clip(CircleShape)
+                .background(Color(0x330E0E11))
+        ) {
+            Icon(
+                imageVector = Icons.Default.GraphicEq,
+                contentDescription = "Core Waveform",
+                tint = PrimaryColor,
+                modifier = Modifier
+                    .size(size * 0.22f)
+                    .rotate(gyroRotation)
             )
         }
     }

@@ -322,22 +322,29 @@ class AgentManifestGenerator {
     fun writeBundleZipToStorage(context: Context, config: AgentProjectConfig): File {
         val bytes = createBundleZipByteArray(config)
         
-        // 1. Try iQOO Office Kit default path
+        // 1. Try iQOO Office Kit default path first
         val iqooShareDir = File(Environment.getExternalStorageDirectory(), "iQOO_Share")
-        val targetFile = try {
-            if (!iqooShareDir.exists()) {
-                iqooShareDir.mkdirs()
+        try {
+            if (iqooShareDir.exists() || iqooShareDir.mkdirs()) {
+                val file = File(iqooShareDir, "bundle.zip")
+                FileOutputStream(file).use { fos ->
+                    fos.write(bytes)
+                }
+                return file
             }
-            File(iqooShareDir, "bundle.zip")
         } catch (_: Exception) {
-            // 2. Fallback to app external files dir
-            val fallbackDir = context.getExternalFilesDir(null) ?: context.filesDir
-            File(fallbackDir, "bundle.zip")
+            // Permission or scoped storage denied, proceed to fallback
         }
 
-        FileOutputStream(targetFile).use { fos ->
+        // 2. Fallback to app external files dir or internal storage
+        val fallbackDir = context.getExternalFilesDir(null) ?: context.filesDir
+        if (!fallbackDir.exists()) {
+            fallbackDir.mkdirs()
+        }
+        val fallbackFile = File(fallbackDir, "bundle.zip")
+        FileOutputStream(fallbackFile).use { fos ->
             fos.write(bytes)
         }
-        return targetFile
+        return fallbackFile
     }
 }

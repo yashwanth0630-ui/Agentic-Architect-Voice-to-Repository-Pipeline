@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -18,8 +19,9 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.agenticarchitect.theme.GlassCardBackground
-import com.example.agenticarchitect.theme.GlassCardBorder
+import com.example.agenticarchitect.theme.PrimaryColor
+import com.example.agenticarchitect.theme.SurfaceContainer
+import com.example.agenticarchitect.theme.SurfaceContainerHighest
 
 @Composable
 fun PresetActionCard(
@@ -31,11 +33,11 @@ fun PresetActionCard(
 ) {
     Box(
         modifier = modifier
-            .width(134.dp)
-            .height(115.dp)
+            .width(200.dp)
+            .height(105.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(GlassCardBackground)
-            .border(1.dp, GlassCardBorder, RoundedCornerShape(20.dp))
+            .background(SurfaceContainer.copy(alpha = 0.85f))
+            .border(1.dp, Color(0x1AFFFFFF), RoundedCornerShape(20.dp))
             .clickable { onClick(prompt) }
             .padding(14.dp)
     ) {
@@ -44,20 +46,41 @@ fun PresetActionCard(
             verticalArrangement = Arrangement.SpaceBetween,
             horizontalAlignment = Alignment.Start
         ) {
-            // Top Left Icon
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = Color.White.copy(alpha = 0.9f),
-                modifier = Modifier.size(19.dp)
-            )
+            // Top Row: Icon Badge (Left) + Sparkle Star (Right)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .background(SurfaceContainerHighest)
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = PrimaryColor,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+
+                Icon(
+                    imageVector = Icons.Default.AutoAwesome,
+                    contentDescription = null,
+                    tint = PrimaryColor,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
 
             // Bottom Text
             Text(
                 text = title,
-                fontSize = 12.5.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
-                lineHeight = 16.sp,
+                lineHeight = 17.sp,
                 color = Color.White
             )
         }

@@ -1,12 +1,13 @@
 package com.example.agenticarchitect.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Icon
@@ -15,114 +16,120 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.agenticarchitect.theme.GlassIconCircleBg
-import com.example.agenticarchitect.theme.GlassIconCircleBorder
-import com.example.agenticarchitect.theme.SubtitleBrown
+import com.example.agenticarchitect.theme.*
 
 @Composable
 fun TopHeaderBar(
+    title: String = "Conversational Chat",
+    isLive: Boolean = true,
     userName: String = "Brakeman",
     subtitle: String = "Welcome back",
+    onCloseClick: () -> Unit = {},
+    onMoreClick: () -> Unit = {},
     onTuneClick: () -> Unit = {},
-    onMenuClick: () -> Unit = {}
+    onMenuClick: () -> Unit = {},
+    modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 12.dp),
+            .height(64.dp)
+            .background(SurfaceDark.copy(alpha = 0.85f))
+            .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // User Profile Info
+        // Left section: Close Button + Title + Live Badge
         Row(
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Box(
                 contentAlignment = Alignment.Center,
                 modifier = Modifier
-                    .size(42.dp)
+                    .size(40.dp)
                     .clip(CircleShape)
-                    .background(
-                        Brush.radialGradient(
-                            colors = listOf(
-                                Color(0x66FFFFFF),
-                                Color(0x22FFFFFF),
-                                Color(0x11000000)
-                            )
+                    .background(SurfaceContainerHigh.copy(alpha = 0.5f))
+                    .clickable { onCloseClick() }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Close",
+                    tint = OnSurface,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = title,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White,
+                    letterSpacing = (-0.2).sp
+                )
+
+                if (isLive) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .background(PrimaryContainer.copy(alpha = 0.15f))
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = "Live",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = PrimaryColor
                         )
-                    )
-                    .border(1.2.dp, Color(0x33FFFFFF), CircleShape)
+                    }
+                }
+            }
+        }
+
+        // Right section: More options + Profile Avatar
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .clickable { onMoreClick() }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.MoreVert,
+                    contentDescription = "More Options",
+                    tint = OnSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(PrimaryContainer)
             ) {
                 Icon(
                     imageVector = Icons.Default.Person,
                     contentDescription = "User Avatar",
-                    tint = Color.White.copy(alpha = 0.9f),
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column {
-                Text(
-                    text = userName,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    letterSpacing = 0.2.sp
-                )
-                Text(
-                    text = subtitle,
-                    fontSize = 11.5.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = SubtitleBrown
-                )
-            }
-        }
-
-        // Action Icons (Tune & Grid/Menu)
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(CircleShape)
-                    .background(GlassIconCircleBg)
-                    .border(1.dp, GlassIconCircleBorder, CircleShape)
-                    .clickable { onTuneClick() }
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Tune,
-                    contentDescription = "Settings / Tune",
-                    tint = Color.White.copy(alpha = 0.85f),
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .size(38.dp)
-                    .clip(CircleShape)
-                    .background(GlassIconCircleBg)
-                    .border(1.dp, GlassIconCircleBorder, CircleShape)
-                    .clickable { onMenuClick() }
-            ) {
-                Icon(
-                    imageVector = Icons.Default.GridView,
-                    contentDescription = "Menu / Grid",
-                    tint = Color.White.copy(alpha = 0.85f),
+                    tint = OnPrimary,
                     modifier = Modifier.size(18.dp)
                 )
             }
         }
     }
 }
+
+

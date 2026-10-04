@@ -17,8 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.agenticarchitect.theme.GlassPillBackground
-import com.example.agenticarchitect.theme.GlassPillBorder
+import com.example.agenticarchitect.theme.*
 
 @Composable
 fun CloseChatPill(
@@ -27,12 +26,12 @@ fun CloseChatPill(
 ) {
     Box(
         modifier = modifier
-            .padding(top = 10.dp, bottom = 6.dp)
+            .padding(vertical = 6.dp)
             .clip(RoundedCornerShape(50))
-            .background(GlassPillBackground)
-            .border(1.dp, GlassPillBorder, RoundedCornerShape(50))
+            .background(SurfaceContainerHigh.copy(alpha = 0.60f))
+            .border(1.dp, Color(0x22FFFFFF), RoundedCornerShape(50))
             .clickable { onClose() }
-            .padding(horizontal = 14.dp, vertical = 7.dp),
+            .padding(horizontal = 16.dp, vertical = 7.dp),
         contentAlignment = Alignment.Center
     ) {
         Row(
@@ -42,15 +41,17 @@ fun CloseChatPill(
             Icon(
                 imageVector = Icons.Default.Close,
                 contentDescription = "Close",
-                tint = Color(0xFFF3ECE8),
-                modifier = Modifier.size(13.dp)
+                tint = PrimaryColor,
+                modifier = Modifier.size(15.dp)
             )
             Text(
                 text = "Close chat",
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
-                color = Color(0xFFF3ECE8)
+                color = PrimaryColor,
+                letterSpacing = 0.3.sp
             )
         }
     }
 }
+

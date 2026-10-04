@@ -18,8 +18,9 @@ export const TextShimmer: React.FC<TextShimmerProps> = ({
   return (
     <>
       <Component
-        className={`inline-block select-none bg-[length:250%_100%] bg-clip-text text-transparent ${className}`}
+        className={`inline-block select-none bg-clip-text text-transparent ${className}`}
         style={{
+          backgroundSize: `${spread * 125}% 100%`,
           backgroundImage: `linear-gradient(90deg, rgba(255, 255, 255, 0.28) 0%, rgba(255, 255, 255, 0.98) 50%, rgba(255, 255, 255, 0.28) 100%)`,
           animation: `text-shimmer ${duration}s ease-in-out infinite alternate`,
           WebkitBackgroundClip: 'text',

@@ -35,10 +35,11 @@ const router = Router();
  * The archive is built entirely in-memory via Node streams —
  * nothing is written to a temp directory on the server.
  */
-router.post('/export', (req: Request, res: Response) => {
+const handleExport = (req: Request, res: Response) => {
   try {
     // ── 1. Validate & parse incoming config (all fields optional) ──
-    const parseResult = ProjectConfigSchema.safeParse(req.body ?? {});
+    const inputData = req.body && Object.keys(req.body).length > 0 ? req.body : {};
+    const parseResult = ProjectConfigSchema.safeParse(inputData);
 
     if (!parseResult.success) {
       return res.status(400).json(
@@ -112,6 +113,9 @@ router.post('/export', (req: Request, res: Response) => {
       return res.status(500).json(buildError('INTERNAL_ERROR', message));
     }
   }
-});
+};
+
+router.post('/export', handleExport);
+router.get('/export', handleExport);
 
 export default router;

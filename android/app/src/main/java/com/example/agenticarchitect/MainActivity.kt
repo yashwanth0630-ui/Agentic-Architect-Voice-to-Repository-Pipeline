@@ -70,10 +70,19 @@ fun AgenticArchitectApp() {
         mutableStateOf("Deploy an autonomous AI agent to monitor liquidity pools. Make it a tactical trading bot.") 
     }
     var isListening by remember { mutableStateOf(false) }
-    var selectedModel by remember { mutableStateOf("● Opus 4.6") }
+    var selectedModel by remember { mutableStateOf("● Opus 4.0") }
     var npuResult by remember { mutableStateOf<MobilePromptIngestionResult?>(null) }
     var savedZipFile by remember { mutableStateOf<File?>(null) }
     var isInferring by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        if (npuResult == null) {
+            val modelId = QualcommGenieXNpuEngine.MODEL_QWEN_7B
+            npuResult = npuEngine.inferProjectFromPrompt(promptText, modelId)
+        }
+    }
+
+
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -137,10 +146,11 @@ fun AgenticArchitectApp() {
 
     fun toggleModelSelection() {
         selectedModel = when (selectedModel) {
-            "● Opus 4.6" -> "⚡ Qwen 2.5-Coder INT4"
+            "● Opus 4.0" -> "⚡ Qwen 2.5-Coder INT4"
             "⚡ Qwen 2.5-Coder INT4" -> "⚡ Phi-4-Mini INT4"
-            else -> "● Opus 4.6"
+            else -> "● Opus 4.0"
         }
+        Toast.makeText(context, "Active NPU Engine: $selectedModel", Toast.LENGTH_SHORT).show()
     }
 
     when (currentScreen) {
@@ -153,10 +163,32 @@ fun AgenticArchitectApp() {
                 onMicClick = { startListeningFlow() },
                 onPresetSelect = { selectedPrompt ->
                     promptText = selectedPrompt
-                    currentScreen = ScreenState.LISTENING
+                    executeNpuInference()
+                },
+                onNavigateTab = { tab ->
+                    when (tab) {
+                        "LISTENING" -> startListeningFlow()
+                        "CHAT" -> executeNpuInference()
+                        else -> currentScreen = ScreenState.HOME
+                    }
+                },
+                onMenuClick = {
+                    Toast.makeText(context, "Active Threads: Vector-Sync Orchestrator (Job #0981 • 91%)", Toast.LENGTH_SHORT).show()
+                },
+                onUserAvatarClick = {
+                    Toast.makeText(context, "Finley Vance • Lead Architect • Qualcomm Snapdragon NPU", Toast.LENGTH_SHORT).show()
+                },
+                onTelemetryClick = { type ->
+                    val msg = when (type) {
+                        "LATENCY" -> "Snapdragon Hexagon NPU Latency: 18.4ms (Target < 25ms)"
+                        "COMPUTE" -> "Compute Allocation: 88.2 TFLOPS INT4/FP16 Dedicated"
+                        else -> "Core Neural Engine v4.8 • Qualcomm GenieX SDK Online"
+                    }
+                    Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
                 }
             )
         }
+
 
         ScreenState.LISTENING -> {
             VoiceListeningScreen(
@@ -173,15 +205,25 @@ fun AgenticArchitectApp() {
                     if (isListening) {
                         voiceManager.stopListening()
                         isListening = false
+                        Toast.makeText(context, "Listening paused", Toast.LENGTH_SHORT).show()
                     } else {
                         startListeningFlow()
+                        Toast.makeText(context, "Listening resumed", Toast.LENGTH_SHORT).show()
                     }
                 },
                 onSendClick = {
                     executeNpuInference()
+                },
+                onSamplePromptSelect = { sample ->
+                    promptText = sample
+                    Toast.makeText(context, "Parameter appended to prompt", Toast.LENGTH_SHORT).show()
+                },
+                onUserAvatarClick = {
+                    Toast.makeText(context, "Finley Vance • Audio Pipeline Active", Toast.LENGTH_SHORT).show()
                 }
             )
         }
+
 
         ScreenState.CHAT -> {
             ChatExecutionScreen(
@@ -197,16 +239,32 @@ fun AgenticArchitectApp() {
                         try {
                             val file = manifestGenerator.writeBundleZipToStorage(context, res.config)
                             savedZipFile = file
-                            Toast.makeText(context, "Saved to ${file.absolutePath}!", Toast.LENGTH_LONG).show()
+                            Toast.makeText(context, "Packaging complete: ${file.name} saved!", Toast.LENGTH_LONG).show()
                         } catch (e: Exception) {
                             Toast.makeText(context, "Write error: ${e.message}", Toast.LENGTH_LONG).show()
                         }
+                    } ?: run {
+                        Toast.makeText(context, "Packaging contract manifests...", Toast.LENGTH_SHORT).show()
                     }
                 },
                 onMicClick = {
                     startListeningFlow()
+                },
+                onSendNewPrompt = { newPrompt ->
+                    promptText = newPrompt
+                    executeNpuInference()
+                },
+                onMoreClick = {
+                    Toast.makeText(context, "Session Options: Export ZIP • Re-run NPU • Telemetry Active", Toast.LENGTH_SHORT).show()
+                },
+                onUserAvatarClick = {
+                    Toast.makeText(context, "Finley Vance • Autonomous Session ARB-09", Toast.LENGTH_SHORT).show()
+                },
+                onAdaPillClick = {
+                    Toast.makeText(context, "Ada v4.2 Pro • Qualcomm Hexagon NPU Runtime • 138ms Latency", Toast.LENGTH_SHORT).show()
                 }
             )
         }
+
     }
 }
