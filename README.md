@@ -80,6 +80,7 @@
         <li><a href="#prerequisites">Prerequisites</a></li>
         <li><a href="#1-native-android-application-phone">1. Native Android Application (Phone)</a></li>
         <li><a href="#2-desktop-engine--web-console-laptop">2. Desktop Engine & Web Console (Laptop)</a></li>
+        <li><a href="#3-local-ai-laptop-bridge--ide-injection">3. Local AI Laptop Bridge & IDE Injection (Ollama / RTX GPU)</a></li>
       </ul>
     </li>
     <li>
@@ -231,6 +232,62 @@ The complete native Android app lives in the [`android/`](file:///c:/Users/Safet
    ```
    Open `http://localhost:3000` in your browser to interact with the web console, inspect manifests, or download `bundle.zip`.
 
+---
+
+### 3. Local AI Laptop Bridge & IDE Injection (Ollama / RTX GPU)
+
+For real-time local network AI generation, the lightweight Python FastAPI bridge ([`scripts/laptop_ai_server.py`](file:///c:/Users/SafetyProtocol/Desktop/IQOO/scripts/laptop_ai_server.py)) listens on port `8000` for voice prompts transmitted from your Android device over Wi-Fi or USB ADB reverse tunnel and injects the resulting architecture directly into your IDE workspace.
+
+#### A. Start Ollama with Local Network Access & CORS:
+```powershell
+# Windows PowerShell
+$env:OLLAMA_HOST="0.0.0.0"
+$env:OLLAMA_ORIGINS="*"
+ollama serve
+
+# Pull high-speed coding model
+ollama pull qwen2.5-coder:1.5b
+```
+
+#### B. Launch the FastAPI Laptop AI Bridge:
+```powershell
+# Option 1: Direct Python
+python scripts/laptop_ai_server.py
+
+# Option 2: Using Uvicorn CLI
+uvicorn scripts.laptop_ai_server:app --host 0.0.0.0 --port 8000 --reload
+```
+
+On startup, the server automatically detects your network adapters and displays the active mobile connection URLs:
+```text
+========================================================================
+  AGENTIC ARCHITECT - LOCAL LAPTOP BACKEND & AI BRIDGE
+========================================================================
+  [+] Host binding: 0.0.0.0 (Port 8000)
+  [+] Local Ollama: http://localhost:11434 (Model: qwen2.5-coder:1.5b)
+  [+] Active IDE Injection Toggle:
+      USE_CURSOR_AGENT = False
+      -> Method A (Direct File Writing via Ollama)
+------------------------------------------------------------------------
+  [>] MOBILE DEVICE CONNECTION URLS (Use in your Android app):
+      http://<YOUR_LOCAL_IP>:8000/generate
+      http://localhost:8000/generate (if using: adb reverse tcp:8000 tcp:8000)
+========================================================================
+```
+
+#### C. Dual IDE Injection Modes (Toggled via if/else):
+* **Method A (Direct File Writing - Default)**:
+  Extracts code blocks from Ollama's response, infers an idiomatic filename (e.g., `AutomatedLiquidityPoolScanner.kt` or `user_service.py`), and writes directly into `./injected_agents/` inside your active workspace.
+* **Method B (Cursor CLI Agent)**:
+  Executes `agent -p "<prompt>"` directly inside your workspace directory to let Cursor's autonomous agent scaffold and refactor files interactively.
+  *(Toggle via `USE_CURSOR_AGENT = True` in `scripts/laptop_ai_server.py` or pass `"use_cursor_agent": true` in the JSON request payload).*
+
+#### D. Zero-Config USB Cable Tunnel (No Wi-Fi Needed):
+```bash
+adb reverse tcp:8000 tcp:8000
+```
+This maps the laptop's port 8000 to the phone, allowing your Android app to communicate with `http://localhost:8000/generate` directly over the USB cable!
+
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ---
@@ -329,7 +386,14 @@ The script automatically:
   - [x] Android `SpeechRecognizer` integration with pulsating microphone UI
   - [x] Qualcomm GenieX SDK Snapdragon NPU inference engine
   - [x] Direct on-device file writing to `/sdcard/iQOO_Share/bundle.zip`
-- [ ] **Phase 4: Hardware Enhancements (Future)**
+- [x] **Phase 4: Local AI Laptop Bridge & IDE Injection (Ollama / RTX GPU)**
+  - [x] High-performance Python FastAPI bridge on port `8000` (`scripts/laptop_ai_server.py`)
+  - [x] Ollama GPU inference with `qwen2.5-coder:1.5b`
+  - [x] Method A: Direct File Writing to `./injected_agents/` with automated filename inference
+  - [x] Method B: Cursor CLI Agent integration (`agent -p "<prompt>"`)
+  - [x] Android cleartext HTTP security configuration & Kotlin networking repository
+  - [x] USB ADB reverse tunnel port-forwarding (`adb reverse tcp:8000 tcp:8000`)
+- [ ] **Phase 5: Hardware Enhancements (Future)**
   - [ ] Direct NPU INT4 weight streaming from Qualcomm AI Hub
   - [ ] Multi-device BLE advertising for zero-click auto-boot discovery
 

@@ -9,3 +9,13 @@ repomix-output.*
 .gradle/
 build/
 local.properties
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+
+# External Sub-Repositories & Test Output
+OpenMontage/
+injected_agents/
