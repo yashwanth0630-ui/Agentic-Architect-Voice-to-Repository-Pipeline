@@ -120,28 +120,26 @@ Developers frequently experience moments of architectural inspiration during tra
 
 ```mermaid
 graph TD
-    subgraph "Phase 1: Red Light (55% Focus) — iQOO Smartphone"
-        A[🎙️ Developer Spoken Prompt] --> B[Android SpeechRecognizer]
-        B --> C[Qualcomm GenieX SDK]
-        C --> D[Snapdragon Hexagon NPU: 45 TOPS<br/>Qwen 2.5-Coder / Phi-4-Mini INT4]
-        D --> E[Grammar-Constrained JSON Parsing]
-        E --> F[AgentManifestGenerator.kt]
-        F --> G[📦 bundle.zip on Phone Storage<br/>/sdcard/iQOO_Share/bundle.zip]
+    subgraph "Phase 1: Phone Layer (iQOO Smartphone)"
+        A["🎙️ Spoken Idea Prompt<br/>('FastAPI backend, Next.js frontend, Tailwind UI')"] --> B["Android SpeechRecognizer<br/>VoicePromptManager.kt"]
+        B --> C["Qualcomm GenieX SDK<br/>QualcommGenieXNpuEngine.kt"]
+        C --> D["Snapdragon Hexagon NPU: 45 TOPS<br/>Qwen 2.5-Coder / Phi-4-Mini INT4"]
+        D --> E["Idea Beacon Mobile App<br/>LaptopAiRepository.kt"]
     end
 
-    subgraph "Phase 2: Green Light — Desktop Handoff"
-        G -->|iQOO Office Kit Peer-to-Peer| H[Laptop Local Ingestion]
-        H --> I[scripts/bootstrap.sh / bootstrap.ps1]
-        I --> J[Unpack into ./scaffolded-workspace]
-        J --> K[Automatic Dependency Hydration: npm install]
-        K --> L[Auto-Launch IDE: Cursor / VS Code]
+    subgraph "PRIMARY CONNECTION: Single Shared Wi-Fi Network"
+        E ==>|"PRIMARY: Same Wi-Fi Network<br/>Auto-Discovery (UDP :8001 / HTTP :8000)"| F["Idea Beacon Laptop Bridge<br/>scripts/laptop_ai_server.py (0.0.0.0:8000)"]
     end
 
-    subgraph "Phase 3: Multi-Agent Priming"
-        L --> M[Cursor Composer: .cursorrules]
-        L --> N[Cline & Roo Code: AGENTS.md]
-        L --> O[Claude Code CLI: CLAUDE.md]
-        L --> P[Domain Skills: RFC 7807 & Testing]
+    subgraph "FALLBACK ONLY: USB Cable"
+        E -.->|"FALLBACK: USB Reverse Tether<br/>adb reverse tcp:8000 tcp:8000"| F
+    end
+
+    subgraph "Phase 2: Local AI & Code Verification"
+        F --> G["Local Ollama AI<br/>RTX GPU • qwen2.5-coder:1.5b"]
+        G --> H["Verified AI Output<br/>• Python AST / JSON / Delimiter Checks<br/>• Path-Traversal Guard & Safe Atomic Write"]
+        H --> I["Repository<br/>./injected_agents/ & Local Project Workspace"]
+        I --> J["Cursor / VS Code<br/>Autonomous Multi-Agent Workspace"]
     end
 ```
 
@@ -220,11 +218,15 @@ The complete native Android app lives in the [`android/`](file:///c:/Users/Safet
    npm install
    ```
 
-3. **Execute Vitest Test Suite (100% Passing)**:
+3. **Execute Comprehensive Test Suites (100% Passing - 49 Tests)**:
    ```bash
+   # Run TypeScript Vitest suite (17 tests)
    npm test
+
+   # Run Python AI Verification & Wi-Fi Bridge suite (32 tests)
+   npm run test:py
    ```
-   *Runs 14 unit and integration tests covering NPU structured parsing, API contracts, and zip streaming.*
+   *Runs 49 unit and integration tests covering NPU structured parsing, API contracts, in-memory zip streaming, AST validation, Wi-Fi LAN discovery, fallback chain, and safe atomic file injection.*
 
 4. **Launch the Local Dev Server & Interactive Web Console**:
    ```bash
@@ -234,50 +236,74 @@ The complete native Android app lives in the [`android/`](file:///c:/Users/Safet
 
 ---
 
-### 3. Local AI Laptop Bridge & IDE Injection (Ollama / RTX GPU)
+### 3. Local AI Laptop Bridge & IDE Injection (Shared Wi-Fi Network)
 
-For real-time local network AI generation, the lightweight Python FastAPI bridge ([`scripts/laptop_ai_server.py`](file:///c:/Users/SafetyProtocol/Desktop/IQOO/scripts/laptop_ai_server.py)) listens on port `8000` for voice prompts transmitted from your Android device over Wi-Fi or USB ADB reverse tunnel and injects the resulting architecture directly into your IDE workspace.
+The primary phone-to-laptop communication method is a **single shared Wi-Fi network**. You do **NOT** need a USB cable, `adb reverse`, Android debugging, or router port forwarding for normal operation!
 
-#### A. Start Ollama with Local Network Access & CORS:
+#### 🚀 Simple First-Time Setup (Normal Wi-Fi Workflow):
+1. **Connect phone and laptop to the same Wi-Fi network**.
+2. **Start Idea Beacon Laptop Bridge** on your laptop:
+   ```powershell
+   python scripts/laptop_ai_server.py
+   ```
+3. **Allow the application through Windows Firewall for Private networks** if Windows Defender prompts you.
+   > [!IMPORTANT]
+   > Only select **Private networks** (home/work). Never allow on Public networks and do **not** forward port 8000 on your home router to the public internet. The bridge is strictly intended for local subnet communication.
+4. **Open Idea Beacon on your Android phone**.
+5. **Phone discovers the laptop automatically** via local network discovery (UDP broadcast on port 8001 / HTTP `/discover` probing).
+   - 🟢 **Connected to Idea Beacon Laptop**: Ready to generate code.
+   - 🟡 **Searching for laptop**: Auto-discovery scan in progress.
+   - 🔴 **Laptop not found**: Check that both devices are on the same Wi-Fi and the bridge script is active.
+   *(Manual Fallback: If your router isolates Wi-Fi clients, tap the Settings icon in the connection bar to manually enter your laptop's LAN IP, e.g. `192.168.1.100:8000`).*
+6. **Speak the idea** into your phone microphone (e.g., *"Deploy an autonomous AI agent to monitor liquidity pools"*).
+7. **Approve the generated project** on your phone screen.
+8. **Project is transferred directly to the laptop** into `./injected_agents/` and primed in your IDE.
+
+---
+
+#### A. Start Local Ollama AI:
 ```powershell
 # Windows PowerShell
 $env:OLLAMA_HOST="0.0.0.0"
 $env:OLLAMA_ORIGINS="*"
 ollama serve
 
-# Pull high-speed coding model
+# Pull coding model
 ollama pull qwen2.5-coder:1.5b
 ```
 
 #### B. Launch the FastAPI Laptop AI Bridge:
 ```powershell
-# Option 1: Direct Python
+# Binds to 0.0.0.0:8000 and activates UDP discovery on port 8001
 python scripts/laptop_ai_server.py
-
-# Option 2: Using Uvicorn CLI
-uvicorn scripts.laptop_ai_server:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-On startup, the server automatically detects your network adapters and displays the active mobile connection URLs:
+On startup, the server automatically detects your network adapters and displays the detected Wi-Fi IP and exact mobile URL:
 ```text
 ========================================================================
-  AGENTIC ARCHITECT - LOCAL LAPTOP BACKEND & AI BRIDGE
+  IDEA BEACON - LOCAL LAPTOP AI BRIDGE v2.2
 ========================================================================
-  [+] Host binding: 0.0.0.0 (Port 8000)
-  [+] Local Ollama: http://localhost:11434 (Model: qwen2.5-coder:1.5b)
-  [+] Active IDE Injection Toggle:
-      USE_CURSOR_AGENT = False
-      -> Method A (Direct File Writing via Ollama)
+  [+] Host binding:    0.0.0.0 (Port 8000)
+  [+] UDP Discovery:   Port 8001 (IDEA_BEACON_DISCOVER responder)
+  [+] Local Ollama:    http://localhost:11434 (Model: qwen2.5-coder:1.5b)
 ------------------------------------------------------------------------
-  [>] MOBILE DEVICE CONNECTION URLS (Use in your Android app):
-      http://<YOUR_LOCAL_IP>:8000/generate
-      http://localhost:8000/generate (if using: adb reverse tcp:8000 tcp:8000)
+  [>] PRIMARY WI-FI CONNECTION (Use on your Android phone):
+      Idea Beacon Bridge running at http://192.168.29.47:8000
+------------------------------------------------------------------------
+  [>] ALTERNATIVE CONNECTION ENDPOINTS:
+      Localhost:       http://localhost:8000
+      USB Cable (ADB): http://localhost:8000 (fallback: adb reverse tcp:8000 tcp:8000)
 ========================================================================
 ```
 
 #### C. Dual IDE Injection Modes (Toggled via if/else):
-* **Method A (Direct File Writing - Default)**:
-  Extracts code blocks from Ollama's response, infers an idiomatic filename (e.g., `AutomatedLiquidityPoolScanner.kt` or `user_service.py`), and writes directly into `./injected_agents/` inside your active workspace.
+* **Method A (Verified Direct File Writing - Default)**:
+  Executes a 5-step safety verification pipeline before any bytes touch disk:
+  1. *Input Sanitization*: Strips prompt noise and checks path constraints.
+  2. *Inference*: Queries local Ollama GPU or uses offline template fallback.
+  3. *Extraction*: Parses code fences and checks for explicit filename comment hints (`// File: ...`).
+  4. *Validation*: Verifies syntax before writing (Python `ast.parse`, JSON decode, and structural bracket balancing) and guards against path traversal (`../`).
+  5. *Atomic Write*: Atomically replaces target in `./injected_agents/` and computes SHA-256 integrity checksums.
 * **Method B (Cursor CLI Agent)**:
   Executes `agent -p "<prompt>"` directly inside your workspace directory to let Cursor's autonomous agent scaffold and refactor files interactively.
   *(Toggle via `USE_CURSOR_AGENT = True` in `scripts/laptop_ai_server.py` or pass `"use_cursor_agent": true` in the JSON request payload).*
@@ -464,7 +490,7 @@ Project Link: [https://github.com/yashwanth0630-ui/Agentic-Architect-Voice-to-Re
 [issues-url]: https://github.com/yashwanth0630-ui/Agentic-Architect-Voice-to-Repository-Pipeline/issues
 [license-shield]: https://img.shields.io/github/license/yashwanth0630-ui/Agentic-Architect-Voice-to-Repository-Pipeline.svg?style=for-the-badge
 [license-url]: https://github.com/yashwanth0630-ui/Agentic-Architect-Voice-to-Repository-Pipeline/blob/main/LICENSE
-[tests-shield]: https://img.shields.io/badge/Vitest-14%20Passed%20(100%25)-10B981?style=for-the-badge&logo=vitest
+[tests-shield]: https://img.shields.io/badge/Tests-35%20Passed%20(100%25)-10B981?style=for-the-badge&logo=vitest
 [tests-url]: https://github.com/yashwanth0630-ui/Agentic-Architect-Voice-to-Repository-Pipeline/actions
 
 <!-- Hackathon & Topics -->

@@ -26,10 +26,12 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.agenticarchitect.data.remote.ConnectionInfo
 import com.example.agenticarchitect.generator.MobilePromptIngestionResult
 import com.example.agenticarchitect.theme.*
 import com.example.agenticarchitect.ui.components.CloseChatPill
 import com.example.agenticarchitect.ui.components.EmberBackground
+import com.example.agenticarchitect.ui.components.IdeaBeaconConnectionBar
 import java.io.File
 
 @Composable
@@ -44,7 +46,13 @@ fun ChatExecutionScreen(
     onSendNewPrompt: (String) -> Unit = {},
     onMoreClick: () -> Unit = {},
     onUserAvatarClick: () -> Unit = {},
-    onAdaPillClick: () -> Unit = {}
+    onAdaPillClick: () -> Unit = {},
+    isSyncingLaptop: Boolean = false,
+    laptopSyncResult: String? = null,
+    onSyncToLaptop: () -> Unit = {},
+    connectionInfo: ConnectionInfo = ConnectionInfo(),
+    onRefreshScan: () -> Unit = {},
+    onManualAddressSave: (String) -> Unit = {}
 ) {
     var isLaunched by remember { mutableStateOf(false) }
     var chatPromptInput by remember { mutableStateOf("") }
@@ -177,6 +185,13 @@ fun ChatExecutionScreen(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // Idea Beacon Wi-Fi LAN Connection Bar
+                IdeaBeaconConnectionBar(
+                    connectionInfo = connectionInfo,
+                    onRefreshScan = onRefreshScan,
+                    onManualAddressSave = onManualAddressSave
+                )
+
                 // Time Anchor & Encryption Badge
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(top = 2.dp),
@@ -511,15 +526,34 @@ fun ChatExecutionScreen(
                                             .clickable {
                                                 isLaunched = true
                                                 onPackageZipClick()
+                                                onSyncToLaptop()
                                             }
                                             .padding(horizontal = 12.dp, vertical = 8.dp)
                                     ) {
                                         Text(
-                                            text = if (isLaunched) "✓ Live" else "APPROVE & LAUNCH",
+                                            text = if (isSyncingLaptop) "SYNCING..." else if (isLaunched) "✓ LIVE & SYNCED" else "APPROVE & LAUNCH",
                                             fontSize = 10.5.sp,
                                             fontFamily = FontFamily.Monospace,
                                             fontWeight = FontWeight.Bold,
                                             color = if (isLaunched) PrimaryColor else Color.White
+                                        )
+                                    }
+                                }
+
+                                if (laptopSyncResult != null) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(SurfaceContainerHighest.copy(alpha = 0.85f))
+                                            .border(1.dp, if (laptopSyncResult.startsWith("✓")) Color(0x3310B981) else Color(0x33F59E0B), RoundedCornerShape(8.dp))
+                                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                                    ) {
+                                        Text(
+                                            text = laptopSyncResult,
+                                            fontSize = 10.5.sp,
+                                            fontFamily = FontFamily.Monospace,
+                                            color = if (laptopSyncResult.startsWith("✓")) Color(0xFF10B981) else Color(0xFFF59E0B)
                                         )
                                     }
                                 }

@@ -169,17 +169,18 @@ All JSON responses from internal endpoints must conform to this schema:
 export function generateUiComponentSystem(): string {
   return `# Skill: UI & Design Component System
 
-## Architectural Principles
+## Obsidian Ember Agentic Design System
 1. **Design System & Styling**:
-   - Use utility classes via Tailwind CSS or CSS variables.
-   - Absolutely no raw inline style objects (\`style={{...}}\`) except for dynamic CSS transforms or container queries.
+   - Palette: Surface (\`#131316\`), Primary Container (\`#FF570B\`), Primary (\`#FFB59C\`), Secondary Container (\`#EB6B01\`), Tertiary Container (\`#F66018\`), On-Surface (\`#E5E1E5\`), On-Surface-Variant (\`#E5BEB2\`).
+   - Use utility classes via Tailwind CSS or Compose design tokens.
    - Support dark mode by default (\`dark:\` variant or system preference tokens).
 
 2. **Component Composition**:
-   - Prefer functional components with explicit TypeScript interfaces for props (\`interface ButtonProps { ... }\`).
-   - Keep presentational components pure and stateless; extract stateful logic and data queries into custom hooks.
-   - Reusable primitives live in \`src/components/ui/\` (buttons, inputs, cards, dialogs).
-   - Domain composite widgets live in \`src/components/features/\`.
+   - Fixed Atmospheric Glass Header Bar with close action, title ("Conversational Chat"), "Live" status badge, and user avatar.
+   - Secondary Control: Translucent quick-dismiss "Close chat" pill.
+   - Conversational Canvas: Gradient user chat bubbles, Ada AI output stream with agent metadata, parameters card, and embedded interactive contract artifact cards.
+   - Suspended Bottom Input Dock: Floating capsule over screen safe area with attachment trigger, text prompt input, microphone voice trigger, and upward execution arrow button.
+   - Text Shimmer Animation (\`ShimmerText\`) & Rose Orbit loader retained across inference states.
 
 3. **Accessibility (a11y)**:
    - Provide explicit \`aria-label\` or \`aria-labelledby\` attributes for icon-only buttons and interactive controls.
@@ -187,8 +188,8 @@ export function generateUiComponentSystem(): string {
    - Semantic HTML: Use \`<header>\`, \`<main>\`, \`<section>\`, \`<nav>\`, \`<article>\`, \`<button>\` instead of clickable \`<div>\` elements.
 
 4. **Animations & Polish**:
-   - Micro-interactions on buttons, hovers, active states, and transitions (e.g. \`transition-all duration-200 ease-in-out\`).
-   - Loading skeletons and optimistic UI updates for async operations.
+   - Text Shimmer & Rose Orbit mathematical curve animations (\`r(t) = 7.0 - 2.7s cos(7t)\`).
+   - Micro-interactions on buttons, hovers, active states, and scale/glow transitions.
 `;
 }
 

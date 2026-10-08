@@ -28,8 +28,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.agenticarchitect.data.remote.ConnectionInfo
 import com.example.agenticarchitect.theme.*
 import com.example.agenticarchitect.ui.components.EmberBackground
+import com.example.agenticarchitect.ui.components.IdeaBeaconConnectionBar
 import com.example.agenticarchitect.ui.components.PresetActionCard
 
 @Composable
@@ -44,7 +46,10 @@ fun HomeScreen(
     onTuneClick: () -> Unit = {},
     onMenuClick: () -> Unit = {},
     onUserAvatarClick: () -> Unit = {},
-    onTelemetryClick: (String) -> Unit = {}
+    onTelemetryClick: (String) -> Unit = {},
+    connectionInfo: ConnectionInfo = ConnectionInfo(),
+    onRefreshScan: () -> Unit = {},
+    onManualAddressSave: (String) -> Unit = {}
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "home_pulse")
     val dotAlpha by infiniteTransition.animateFloat(
@@ -171,6 +176,13 @@ fun HomeScreen(
                     .padding(horizontal = 16.dp, vertical = 6.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // Wi-Fi LAN Connection Status Bar
+                IdeaBeaconConnectionBar(
+                    connectionInfo = connectionInfo,
+                    onRefreshScan = onRefreshScan,
+                    onManualAddressSave = onManualAddressSave
+                )
+
                 // User Profile Sub-Header Bar
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(top = 2.dp),

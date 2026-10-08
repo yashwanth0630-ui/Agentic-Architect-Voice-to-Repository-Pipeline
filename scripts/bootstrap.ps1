@@ -40,8 +40,20 @@ if (Test-Path $IqooBundlePath) {
     Invoke-RestMethod -Uri $Endpoint -Method Post -Body "{}" -ContentType "application/json" -OutFile $Bundle
     $TransferSource = "HTTP Bridge ($Endpoint)"
   } catch {
-    Write-Host "[ERROR] Failed to fetch bundle from $Endpoint : $_" -ForegroundColor Red
-    exit 1
+    Write-Host "[WARN] Server at $Endpoint unreachable. Attempting local manifest compilation..." -ForegroundColor Yellow
+    if (Test-Path "package.json") {
+      try {
+        npx tsx src/generator/generator.ts
+        Compress-Archive -Path AGENTS.md, .cursorrules, CLAUDE.md, GEMINI.md, skills, package.json -DestinationPath $Bundle -Force
+        $TransferSource = "Local Manifest Compiler"
+      } catch {
+        Write-Host "[ERROR] Failed to compile local bundle: $_" -ForegroundColor Red
+        exit 1
+      }
+    } else {
+      Write-Host "[ERROR] Failed to fetch bundle from $Endpoint : $_" -ForegroundColor Red
+      exit 1
+    }
   }
 }
 

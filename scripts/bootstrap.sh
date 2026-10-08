@@ -46,14 +46,22 @@ else
     "${ENDPOINT}" || echo "000")
 
   if [ "${HTTP_CODE}" -ne 200 ]; then
-    echo "❌  Server request failed (HTTP ${HTTP_CODE})."
-    if [ -f "${BUNDLE}" ]; then
-      cat "${BUNDLE}"
-      rm -f "${BUNDLE}"
+    echo "⚠️   Server at ${ENDPOINT} unreachable (HTTP ${HTTP_CODE}). Attempting local manifest compilation..."
+    if [ -f "package.json" ]; then
+      npx tsx src/generator/generator.ts
+      zip -q -r "${BUNDLE}" AGENTS.md .cursorrules CLAUDE.md GEMINI.md skills package.json || tar -czf "${BUNDLE}" AGENTS.md .cursorrules CLAUDE.md GEMINI.md skills package.json
+      TRANSFER_SOURCE="Local Manifest Compiler"
+    else
+      echo "❌  Server request failed and package.json not found."
+      if [ -f "${BUNDLE}" ]; then
+        cat "${BUNDLE}"
+        rm -f "${BUNDLE}"
+      fi
+      exit 1
     fi
-    exit 1
+  else
+    TRANSFER_SOURCE="HTTP Bridge (${ENDPOINT})"
   fi
-  TRANSFER_SOURCE="HTTP Bridge (${ENDPOINT})"
 fi
 
 echo "✅  Workspace bundle acquired via ${TRANSFER_SOURCE} ($(wc -c < "${BUNDLE}" | tr -d ' ') bytes)"

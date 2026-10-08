@@ -9,8 +9,10 @@
     "start": "node dist/api/server.js",
     "lint": "eslint src/ --ext .ts",
     "test": "vitest run tests/",
+    "test:py": "python -m unittest tests/test_laptop_ai_server.py",
     "generate": "tsx src/generator/generator.ts",
     "mcp": "tsx src/mcp/server.ts",
+    "bridge": "python scripts/laptop_ai_server.py",
     "pack": "repomix"
   },
   "keywords": [

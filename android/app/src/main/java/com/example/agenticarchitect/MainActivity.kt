@@ -18,6 +18,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import com.example.agenticarchitect.data.remote.ConnectionInfo
+import com.example.agenticarchitect.data.remote.ConnectionState
+import com.example.agenticarchitect.data.remote.LaptopAiRepository
+import com.example.agenticarchitect.data.remote.LaptopBridgeException
 import com.example.agenticarchitect.generator.AgentManifestGenerator
 import com.example.agenticarchitect.generator.MobilePromptIngestionResult
 import com.example.agenticarchitect.npu.QualcommGenieXNpuEngine
@@ -27,6 +31,7 @@ import com.example.agenticarchitect.ui.screens.ChatExecutionScreen
 import com.example.agenticarchitect.ui.screens.HomeScreen
 import com.example.agenticarchitect.ui.screens.VoiceListeningScreen
 import com.example.agenticarchitect.voice.VoicePromptManager
+import kotlinx.coroutines.launch
 import java.io.File
 
 enum class ScreenState {
@@ -64,7 +69,10 @@ fun AgenticArchitectApp() {
     val voiceManager = remember { VoicePromptManager(context) }
     val npuEngine = remember { QualcommGenieXNpuEngine() }
     val manifestGenerator = remember { AgentManifestGenerator() }
+    val laptopRepository = remember { LaptopAiRepository(context) }
+    val coroutineScope = rememberCoroutineScope()
 
+    var connectionInfo by remember { mutableStateOf(laptopRepository.connectionInfo) }
     var currentScreen by remember { mutableStateOf(ScreenState.HOME) }
     var promptText by remember { 
         mutableStateOf("Deploy an autonomous AI agent to monitor liquidity pools. Make it a tactical trading bot.") 
@@ -74,12 +82,16 @@ fun AgenticArchitectApp() {
     var npuResult by remember { mutableStateOf<MobilePromptIngestionResult?>(null) }
     var savedZipFile by remember { mutableStateOf<File?>(null) }
     var isInferring by remember { mutableStateOf(false) }
+    var isSyncingLaptop by remember { mutableStateOf(false) }
+    var laptopSyncResult by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         if (npuResult == null) {
             val modelId = QualcommGenieXNpuEngine.MODEL_QWEN_7B
             npuResult = npuEngine.inferProjectFromPrompt(promptText, modelId)
         }
+        // Auto-discover laptop bridge on shared Wi-Fi
+        connectionInfo = laptopRepository.checkConnection()
     }
 
 
@@ -159,6 +171,53 @@ fun AgenticArchitectApp() {
         Toast.makeText(context, "Active NPU Engine: $selectedModel", Toast.LENGTH_SHORT).show()
     }
 
+    fun dispatchToLaptopBridge() {
+        if (isSyncingLaptop) return
+        isSyncingLaptop = true
+        laptopSyncResult = "Syncing to Laptop Bridge..."
+        coroutineScope.launch {
+            val result = laptopRepository.generateFromPrompt(promptText)
+            isSyncingLaptop = false
+            connectionInfo = laptopRepository.connectionInfo
+            result.onSuccess { res ->
+                val fileName = res.filename ?: "AutonomousAgentPipeline.kt"
+                val syntaxBadge = if (res.syntaxValid) "✓" else "⚠"
+                laptopSyncResult = "$syntaxBadge Saved to Laptop: $fileName (${res.latencyMs.toInt()}ms)"
+                Toast.makeText(context, "Injected into laptop IDE: $fileName", Toast.LENGTH_SHORT).show()
+            }.onFailure { err ->
+                val tip = if (err is LaptopBridgeException) err.remediationTip else "Run: python scripts/laptop_ai_server.py"
+                laptopSyncResult = "⚠ Laptop Bridge: ${err.message}"
+                Toast.makeText(context, "${err.message}\n$tip", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    fun triggerScan() {
+        coroutineScope.launch {
+            val info = laptopRepository.checkConnection()
+            connectionInfo = info
+            if (info.state == ConnectionState.CONNECTED) {
+                Toast.makeText(context, "Connected to laptop at ${info.endpointUrl}", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "Laptop not found on Wi-Fi. Check bridge terminal.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    fun setManualAddress(raw: String) {
+        val res = laptopRepository.setManualAddress(raw)
+        res.onSuccess { validUrl ->
+            coroutineScope.launch {
+                val info = laptopRepository.checkConnection()
+                connectionInfo = info
+                val msg = if (validUrl.isEmpty()) "Restored Auto-Discovery" else "Saved laptop address: $validUrl"
+                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+            }
+        }.onFailure { err ->
+            Toast.makeText(context, "Invalid address: ${err.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
     when (currentScreen) {
         ScreenState.HOME -> {
             HomeScreen(
@@ -191,7 +250,10 @@ fun AgenticArchitectApp() {
                         else -> "Core Neural Engine v4.8 • Qualcomm GenieX SDK Online"
                     }
                     Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                }
+                },
+                connectionInfo = connectionInfo,
+                onRefreshScan = { triggerScan() },
+                onManualAddressSave = { setManualAddress(it) }
             )
         }
 
@@ -236,6 +298,9 @@ fun AgenticArchitectApp() {
                 npuResult = npuResult,
                 savedZipFile = savedZipFile,
                 isInferring = isInferring,
+                isSyncingLaptop = isSyncingLaptop,
+                laptopSyncResult = laptopSyncResult,
+                onSyncToLaptop = { dispatchToLaptopBridge() },
                 onCloseClick = {
                     currentScreen = ScreenState.HOME
                 },
@@ -267,7 +332,10 @@ fun AgenticArchitectApp() {
                 },
                 onAdaPillClick = {
                     Toast.makeText(context, "Ada v4.2 Pro • Qualcomm Hexagon NPU Runtime • 138ms Latency", Toast.LENGTH_SHORT).show()
-                }
+                },
+                connectionInfo = connectionInfo,
+                onRefreshScan = { triggerScan() },
+                onManualAddressSave = { setManualAddress(it) }
             )
         }
 
