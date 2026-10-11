@@ -20,6 +20,7 @@ import socket
 import tempfile
 import time
 import unittest
+from unittest.mock import patch, MagicMock
 from fastapi.testclient import TestClient
 
 # Import functions from scripts.laptop_ai_server
@@ -43,6 +44,24 @@ from laptop_ai_server import (
     DISCOVERY_SERVICE_ID,
     SERVER_VERSION
 )
+from project_manager import (
+    ProjectManager,
+    project_manager,
+    ProjectMetadata,
+    sanitize_project_id
+)
+from preview_server import (
+    PreviewServerManager,
+    preview_manager,
+    get_detected_lan_ip,
+    find_available_port
+)
+from agent_orchestrator import (
+    AgentOrchestrator,
+    agent_orchestrator,
+    OrchestrationResult
+)
+import urllib.request
 
 
 class TestFilenameSanitization(unittest.TestCase):
@@ -347,6 +366,51 @@ class TestSecurityValidation(unittest.TestCase):
             # Must write to a valid file path without throwing or corrupting host system
             self.assertTrue(os.path.exists(data["file_path"]))
 
+    def test_security_middleware_blocks_malformed_origin_header(self):
+        """Malformed or unparseable origin addresses are rejected with 403 Forbidden."""
+        headers = {"X-Forwarded-For": "not-a-valid-ip-address"}
+        response = self.client.get("/health", headers=headers)
+        self.assertEqual(response.status_code, 403)
+        self.assertIn("Forbidden", response.json()["detail"])
+
+        headers2 = {"X-Forwarded-For": "http://192.168.1.1:8000"}
+        response2 = self.client.get("/health", headers=headers2)
+        self.assertEqual(response2.status_code, 403)
+
+    def test_cursor_agent_invoked_without_shell_true(self):
+        """Cursor CLI must be invoked with argument vector list and shell=False (no shell injection)."""
+        with patch("subprocess.run") as mock_run:
+            mock_proc = MagicMock()
+            mock_proc.returncode = 0
+            mock_proc.stdout = "Cursor complete"
+            mock_proc.stderr = ""
+            mock_run.return_value = mock_proc
+
+            payload = {
+                "prompt": "Build service; rm -rf /",
+                "use_cursor_agent": True,
+                "force_single_module": True
+            }
+            response = self.client.post("/generate", json=payload)
+            self.assertEqual(response.status_code, 200)
+
+            mock_run.assert_called_once()
+            called_cmd = mock_run.call_args[0][0]
+            called_kwargs = mock_run.call_args[1]
+
+            # Verify command is a safe list, NOT a string
+            self.assertIsInstance(called_cmd, list)
+            self.assertEqual(called_cmd[0], "agent")
+            self.assertEqual(called_cmd[1], "-p")
+            self.assertEqual(called_cmd[2], "Build service; rm -rf /")
+            # Verify shell=False
+            self.assertFalse(called_kwargs.get("shell", True))
+
+    def test_ollama_timeout_configuration(self):
+        """OLLAMA_TIMEOUT constant is loaded and greater than or equal to 60s."""
+        from laptop_ai_server import OLLAMA_TIMEOUT
+        self.assertGreaterEqual(OLLAMA_TIMEOUT, 60.0)
+
 
 class TestConnectionFailureAndFallback(unittest.TestCase):
     """
@@ -448,6 +512,226 @@ class TestConnectionFailureAndFallback(unittest.TestCase):
                     break
 
         self.assertEqual(active_endpoint, "http://localhost:8000")
+
+
+class TestPhase1ProjectManagerAndOrchestrator(unittest.TestCase):
+    """
+    Phase 1 Test Suite:
+    1. project creation
+    2. project directory creation
+    3. multiple generated files
+    4. project metadata
+    5. preview server
+    6. LAN preview URL
+    7. invalid/path traversal project names
+    8. Ollama offline fallback
+    9. /generate structured response
+    """
+    def setUp(self):
+        self.client = TestClient(app)
+        self.test_projects_dir = tempfile.mkdtemp(prefix="test_iqoo_projects_")
+        self.pm = ProjectManager(projects_dir=self.test_projects_dir)
+        self.psm = PreviewServerManager(port_range_start=8500)
+        self.orchestrator = AgentOrchestrator(pm=self.pm, psm=self.psm)
+
+    def tearDown(self):
+        self.psm.stop_all()
+        preview_manager.stop_all()
+        if os.path.exists(self.test_projects_dir):
+            shutil.rmtree(self.test_projects_dir, ignore_errors=True)
+
+    def test_1_project_creation(self):
+        """1. Project creation creates metadata and slug."""
+        meta = self.pm.create_project("company website")
+        self.assertIsNotNone(meta)
+        self.assertEqual(meta.project_id, "company-website")
+        self.assertEqual(meta.project_name, "Company Website")
+        self.assertEqual(meta.status, "created")
+
+    def test_2_project_directory_creation(self):
+        """2. Project directory actually exists on disk within safe boundary."""
+        meta = self.pm.create_project("company website")
+        self.assertTrue(os.path.isdir(meta.workspace_path))
+        self.assertTrue(meta.workspace_path.startswith(self.test_projects_dir))
+
+    def test_3_multiple_generated_files(self):
+        """3. Generates multiple real website files (not AutonomousAgentPipeline.kt)."""
+        import asyncio
+        loop = asyncio.new_event_loop()
+        try:
+            res = loop.run_until_complete(
+                self.orchestrator.execute_new_project("Create me a website for my company")
+            )
+        finally:
+            loop.close()
+
+        self.assertTrue(res.success)
+        expected_files = ["index.html", "styles.css", "app.js", "README.md", "package.json"]
+        for ef in expected_files:
+            self.assertIn(ef, res.files_created)
+            fpath = os.path.join(res.workspace, ef)
+            self.assertTrue(os.path.isfile(fpath), f"Missing expected file: {ef}")
+            self.assertGreater(os.path.getsize(fpath), 10, f"File {ef} was empty")
+
+        # Explicit requirement: Do NOT create AutonomousAgentPipeline.kt in company-website
+        kt_placeholder = os.path.join(res.workspace, "AutonomousAgentPipeline.kt")
+        self.assertFalse(os.path.exists(kt_placeholder), "Kotlin placeholder file was mistakenly generated")
+
+    def test_4_project_metadata(self):
+        """4. Persistent metadata tracking in projects.json."""
+        meta = self.pm.create_project("Alpha Portal", project_type="website", description="Alpha test")
+        self.pm.update_project(meta.project_id, preview_port=8555, preview_url="http://127.0.0.1:8555")
+
+        registry_file = os.path.join(self.test_projects_dir, "projects.json")
+        self.assertTrue(os.path.exists(registry_file))
+
+        with open(registry_file, "r", encoding="utf-8") as f:
+            registry = json.load(f)
+
+        self.assertIn("alpha-portal", registry)
+        entry = registry["alpha-portal"]
+        self.assertEqual(entry["project_id"], "alpha-portal")
+        self.assertEqual(entry["project_type"], "website")
+        self.assertEqual(entry["preview_port"], 8555)
+        self.assertEqual(entry["preview_url"], "http://127.0.0.1:8555")
+        self.assertIn("created_at", entry)
+        self.assertIn("updated_at", entry)
+
+        # Verify get_project and list_projects
+        retrieved = self.pm.get_project("alpha-portal")
+        self.assertIsNotNone(retrieved)
+        self.assertEqual(retrieved.project_name, "Alpha Portal")
+        all_projects = self.pm.list_projects()
+        self.assertEqual(len(all_projects), 1)
+
+    def test_5_preview_server_lifecycle(self):
+        """5. Preview server start, HTTP request, status, and stop."""
+        workspace = os.path.join(self.test_projects_dir, "preview-test")
+        os.makedirs(workspace, exist_ok=True)
+        with open(os.path.join(workspace, "index.html"), "w", encoding="utf-8") as f:
+            f.write("<html><body><h1>Preview Live</h1></body></html>")
+
+        # Start preview
+        inst = self.psm.start_preview("preview-test", workspace)
+        self.assertEqual(inst["status"], "running")
+        self.assertGreater(inst["port"], 0)
+
+        # Test reachability over local socket
+        port = inst["port"]
+        req = urllib.request.Request(f"http://127.0.0.1:{port}/index.html")
+        with urllib.request.urlopen(req, timeout=3.0) as resp:
+            content = resp.read().decode("utf-8")
+            self.assertIn("Preview Live", content)
+
+        # Verify status endpoint query
+        running = self.psm.get_preview("preview-test")
+        self.assertIsNotNone(running)
+        self.assertEqual(running["port"], port)
+
+        # Stop preview
+        stopped = self.psm.stop_preview("preview-test")
+        self.assertTrue(stopped)
+        self.assertIsNone(self.psm.get_preview("preview-test"))
+
+    def test_6_lan_preview_url(self):
+        """6. Dynamically determined LAN IP and valid preview URL."""
+        lan_ip = get_detected_lan_ip()
+        self.assertIsInstance(lan_ip, str)
+        self.assertGreater(len(lan_ip), 0)
+        # Verify valid IPv4 format
+        octets = lan_ip.split(".")
+        self.assertEqual(len(octets), 4)
+
+        workspace = os.path.join(self.test_projects_dir, "lan-test")
+        os.makedirs(workspace, exist_ok=True)
+        inst = self.psm.start_preview("lan-test", workspace)
+        self.assertTrue(inst["preview_url"].startswith("http://"))
+        self.assertIn(str(inst["port"]), inst["preview_url"])
+        self.assertEqual(inst["lan_ip"], lan_ip)
+
+    def test_7_invalid_path_traversal_project_names(self):
+        """7. Path traversal in project names is rejected or neutralized."""
+        sanitized = sanitize_project_id("../../../etc/passwd")
+        self.assertNotIn("..", sanitized)
+        self.assertNotIn("/", sanitized)
+        self.assertNotIn("\\", sanitized)
+        self.assertEqual(sanitized, "passwd")
+
+        # Explicit path traversal in get_safe_workspace_path must raise ValueError
+        with self.assertRaises(ValueError):
+            self.pm.get_safe_workspace_path("../../../unauthorized_escape")
+
+        # Explicit path traversal in create_project explicit_id must raise ValueError
+        with self.assertRaises(ValueError):
+            self.pm.create_project("malicious", explicit_id="../../bad_escape")
+
+    def test_8_ollama_offline_fallback(self):
+        """8. If Ollama is offline, system creates project and templates without failing."""
+        import asyncio
+        loop = asyncio.new_event_loop()
+        try:
+            # Executes with local Ollama offline
+            res = loop.run_until_complete(
+                self.orchestrator.execute_new_project("Build a landing page for our startup")
+            )
+        finally:
+            loop.close()
+
+        self.assertTrue(res.success)
+        self.assertEqual(res.status, "running")
+        self.assertIsNotNone(res.preview_url)
+        self.assertGreater(len(res.files_created), 0)
+
+    def test_9_generate_structured_response(self):
+        """9. /generate endpoint returns structured JSON with real project and preview URL."""
+        # Ensure pristine state by cleaning up any previous test project
+        for pid in list(project_manager._read_registry().keys()):
+            if pid.startswith("company-website"):
+                preview_manager.stop_preview(pid)
+                project_manager.delete_project(pid, delete_files=True)
+
+        payload = {
+            "prompt": "Create me a folder where I can build a website for my company"
+        }
+        response = self.client.post("/generate", json=payload)
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+
+        # Verify structured response fields
+        self.assertTrue(data["success"])
+        self.assertEqual(data["status"], "running")
+        self.assertEqual(data["project_id"], "company-website")
+        self.assertEqual(data["project_name"], "Company Website")
+        self.assertIsNotNone(data["workspace"])
+        self.assertTrue(os.path.isdir(data["workspace"]))
+        self.assertIsNotNone(data["preview_url"])
+        self.assertTrue(data["preview_url"].startswith("http://"))
+        self.assertIn("files_created", data)
+        self.assertIn("index.html", data["files_created"])
+        self.assertIn("styles.css", data["files_created"])
+        self.assertIn("app.js", data["files_created"])
+        self.assertIn("README.md", data["files_created"])
+
+        # Check real files on disk
+        self.assertTrue(os.path.isfile(os.path.join(data["workspace"], "index.html")))
+        self.assertTrue(os.path.isfile(os.path.join(data["workspace"], "styles.css")))
+        self.assertTrue(os.path.isfile(os.path.join(data["workspace"], "app.js")))
+        self.assertTrue(os.path.isfile(os.path.join(data["workspace"], "README.md")))
+        self.assertFalse(os.path.exists(os.path.join(data["workspace"], "AutonomousAgentPipeline.kt")))
+
+        # Test project listing endpoint
+        list_resp = self.client.get("/projects")
+        self.assertEqual(list_resp.status_code, 200)
+        project_ids = [p["project_id"] for p in list_resp.json()]
+        self.assertIn("company-website", project_ids)
+
+        # Test single project detail endpoint
+        detail_resp = self.client.get("/projects/company-website")
+        self.assertEqual(detail_resp.status_code, 200)
+        self.assertEqual(detail_resp.json()["project_id"], "company-website")
+
+        # Cleanup preview server after test
+        preview_manager.stop_preview("company-website")
 
 
 if __name__ == "__main__":

@@ -1,6 +1,8 @@
 node_modules/
 dist/
 .env
+.github_token
+*.token
 *.log
 repomix-output.*
 .DS_Store
@@ -16,6 +18,12 @@ __pycache__/
 *$py.class
 .venv/
 
+# Scratch temporary dumps
+scratch/*.png
+scratch/*.xml
+scratch/*.log
+
 # External Sub-Repositories & Test Output
 OpenMontage/
 injected_agents/
+projects/

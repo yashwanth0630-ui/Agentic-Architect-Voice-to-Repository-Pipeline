@@ -1,0 +1,16 @@
+[tool.pyright]
+include = ["scripts", "tests", "scratch"]
+exclude = [
+    "**/node_modules",
+    "**/__pycache__",
+    ".venv",
+    "OpenMontage"
+]
+extraPaths = [
+    "scripts",
+    ".venv/Lib/site-packages",
+    "OpenMontage/.venv/Lib/site-packages"
+]
+venvPath = "."
+venv = ".venv"
+pythonVersion = "3.12"

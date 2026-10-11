@@ -17,10 +17,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -541,20 +544,55 @@ fun ChatExecutionScreen(
                                 }
 
                                 if (laptopSyncResult != null) {
+                                    val context = LocalContext.current
+                                    val previewUrlMatch = remember(laptopSyncResult) {
+                                        if (laptopSyncResult.contains("http://")) {
+                                            Regex("""http://[^\s)]+""").find(laptopSyncResult)?.value
+                                        } else null
+                                    }
+
                                     Box(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .clip(RoundedCornerShape(8.dp))
                                             .background(SurfaceContainerHighest.copy(alpha = 0.85f))
                                             .border(1.dp, if (laptopSyncResult.startsWith("✓")) Color(0x3310B981) else Color(0x33F59E0B), RoundedCornerShape(8.dp))
+                                            .then(
+                                                if (previewUrlMatch != null) {
+                                                    Modifier.clickable {
+                                                        try {
+                                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(previewUrlMatch)).apply {
+                                                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                                            }
+                                                            context.startActivity(intent)
+                                                        } catch (_: Exception) {}
+                                                    }
+                                                } else Modifier
+                                            )
                                             .padding(horizontal = 10.dp, vertical = 6.dp)
                                     ) {
-                                        Text(
-                                            text = laptopSyncResult,
-                                            fontSize = 10.5.sp,
-                                            fontFamily = FontFamily.Monospace,
-                                            color = if (laptopSyncResult.startsWith("✓")) Color(0xFF10B981) else Color(0xFFF59E0B)
-                                        )
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = laptopSyncResult,
+                                                fontSize = 10.5.sp,
+                                                fontFamily = FontFamily.Monospace,
+                                                color = if (laptopSyncResult.startsWith("✓")) Color(0xFF10B981) else Color(0xFFF59E0B),
+                                                modifier = Modifier.weight(1f, fill = false)
+                                            )
+                                            if (previewUrlMatch != null) {
+                                                Text(
+                                                    text = "🌐 OPEN",
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFF10B981),
+                                                    modifier = Modifier.padding(start = 6.dp)
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }

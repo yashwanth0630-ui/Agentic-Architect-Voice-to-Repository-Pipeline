@@ -60,8 +60,15 @@ val UserBubbleBackground = Color(0x80B83A14)
 val AiBubbleBackground = Color(0x4D201F22)
 val AiBubbleBorder = Color(0x26FF570B)
 
-// Text Colors
 val MutedText = Color(0xFFA1A1AA)
 val LightText = Color(0xFFE5E1E5)
 val SubtitleBrown = Color(0xFFE5BEB2)
+
+// Publishing & Card UI Tokens
+val TextPrimary = Color(0xFFF3F4F6)
+val TextSecondary = Color(0xFFD1D5DB)
+val TextMuted = Color(0xFF9CA3AF)
+val SurfaceCard = Color(0xFF1C1B1E)
+val BorderSubtle = Color(0x1AFFFFFF)
+
 

@@ -29,6 +29,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.agenticarchitect.data.remote.ConnectionInfo
+import com.example.agenticarchitect.data.remote.SelectedRepository
 import com.example.agenticarchitect.theme.*
 import com.example.agenticarchitect.ui.components.EmberBackground
 import com.example.agenticarchitect.ui.components.IdeaBeaconConnectionBar
@@ -49,8 +50,14 @@ fun HomeScreen(
     onTelemetryClick: (String) -> Unit = {},
     connectionInfo: ConnectionInfo = ConnectionInfo(),
     onRefreshScan: () -> Unit = {},
-    onManualAddressSave: (String) -> Unit = {}
+    onManualAddressSave: (String) -> Unit = {},
+    selectedRepo: SelectedRepository? = null,
+    onOpenGitHubClick: () -> Unit = {},
+    onNewProjectClick: () -> Unit = {},
+    onOpenRepoStudio: () -> Unit = {}
 ) {
+
+
     val infiniteTransition = rememberInfiniteTransition(label = "home_pulse")
     val dotAlpha by infiniteTransition.animateFloat(
         initialValue = 0.35f,
@@ -133,6 +140,23 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(if (selectedRepo != null) PrimaryColor.copy(alpha = 0.2f) else SurfaceContainerLow.copy(alpha = 0.6f))
+                            .border(if (selectedRepo != null) 1.dp else 0.dp, PrimaryColor, CircleShape)
+                            .clickable { onOpenGitHubClick() }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CloudQueue,
+                            contentDescription = "GitHub Repositories",
+                            tint = if (selectedRepo != null) PrimaryColor else OnSurfaceVariant,
+                            modifier = Modifier.size(19.dp)
+                        )
+                    }
+
                     Box(
                         contentAlignment = Alignment.Center,
                         modifier = Modifier
@@ -303,6 +327,153 @@ fun HomeScreen(
                         color = OnSurfaceVariant,
                         lineHeight = 18.sp
                     )
+                }
+
+                // ── Mode Choice: New Project vs Open GitHub Repository ───────
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // 1. New Project Card
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(SurfaceContainerLow.copy(alpha = 0.9f))
+                            .border(
+                                width = if (selectedRepo == null) 1.5.dp else 1.dp,
+                                color = if (selectedRepo == null) PrimaryColor else Color(0x1AFFFFFF),
+                                shape = RoundedCornerShape(16.dp)
+                            )
+                            .clickable { onNewProjectClick() }
+                            .padding(14.dp)
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier
+                                        .size(30.dp)
+                                        .clip(CircleShape)
+                                        .background(PrimaryContainer.copy(alpha = 0.25f))
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.AddCircleOutline,
+                                        contentDescription = null,
+                                        tint = PrimaryColor,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                if (selectedRepo == null) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(50))
+                                            .background(PrimaryColor.copy(alpha = 0.2f))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = "Active",
+                                            fontSize = 9.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = PrimaryColor
+                                        )
+                                    }
+                                }
+                            }
+                            Column {
+                                Text(
+                                    text = "New Project",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = "Scaffold local project via voice",
+                                    fontSize = 11.sp,
+                                    color = OnSurfaceVariant,
+                                    lineHeight = 14.sp
+                                )
+                            }
+                        }
+                    }
+
+                    // 2. Open GitHub Repository Card
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(SurfaceContainerLow.copy(alpha = 0.9f))
+                            .border(
+                                width = if (selectedRepo != null) 1.5.dp else 1.dp,
+                                color = if (selectedRepo != null) PrimaryColor else Color(0x1AFFFFFF),
+                                shape = RoundedCornerShape(16.dp)
+                            )
+                            .clickable {
+                                if (selectedRepo != null) {
+                                    onOpenRepoStudio()
+                                } else {
+                                    onOpenGitHubClick()
+                                }
+                            }
+
+                            .padding(14.dp)
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    contentAlignment = Alignment.Center,
+                                    modifier = Modifier
+                                        .size(30.dp)
+                                        .clip(CircleShape)
+                                        .background(if (selectedRepo != null) Color(0x334CAF50) else SurfaceContainerHighest)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CloudQueue,
+                                        contentDescription = null,
+                                        tint = if (selectedRepo != null) Color(0xFF81C784) else SecondaryColor,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(50))
+                                        .background(if (selectedRepo != null) Color(0x334CAF50) else SurfaceContainerHighest)
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = if (selectedRepo != null) "Selected ✓" else "Browse",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (selectedRepo != null) Color(0xFF81C784) else OnSurfaceVariant
+                                    )
+                                }
+                            }
+                            Column {
+                                Text(
+                                    text = "GitHub Repository",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = if (selectedRepo != null) selectedRepo.fullName else "Select cloud repository",
+                                    fontSize = 11.sp,
+                                    fontFamily = if (selectedRepo != null) FontFamily.Monospace else FontFamily.Default,
+                                    color = if (selectedRepo != null) PrimaryColor else OnSurfaceVariant,
+                                    maxLines = 1,
+                                    lineHeight = 14.sp
+                                )
+                            }
+                        }
+                    }
                 }
 
                 // Rapid Directives Horizontal Scroll
