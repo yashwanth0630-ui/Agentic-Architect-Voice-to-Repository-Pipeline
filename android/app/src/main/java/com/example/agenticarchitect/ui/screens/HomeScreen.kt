@@ -13,10 +13,8 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,12 +26,17 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.agenticarchitect.data.local.IdeaSyncStatus
+import com.example.agenticarchitect.data.local.IdeaVaultEntity
 import com.example.agenticarchitect.data.remote.ConnectionInfo
 import com.example.agenticarchitect.data.remote.SelectedRepository
 import com.example.agenticarchitect.theme.*
 import com.example.agenticarchitect.ui.components.EmberBackground
 import com.example.agenticarchitect.ui.components.IdeaBeaconConnectionBar
 import com.example.agenticarchitect.ui.components.PresetActionCard
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun HomeScreen(
@@ -54,7 +57,14 @@ fun HomeScreen(
     selectedRepo: SelectedRepository? = null,
     onOpenGitHubClick: () -> Unit = {},
     onNewProjectClick: () -> Unit = {},
-    onOpenRepoStudio: () -> Unit = {}
+    onOpenRepoStudio: () -> Unit = {},
+    savedIdeas: List<IdeaVaultEntity> = emptyList(),
+    onSelectIdea: (IdeaVaultEntity) -> Unit = {},
+    onEditIdea: (localId: String, newTitle: String, newPrompt: String) -> Unit = { _, _, _ -> },
+    onDeleteIdea: (String) -> Unit = {},
+    onRetrySyncIdea: (IdeaVaultEntity) -> Unit = {},
+    onSyncAllIdeas: () -> Unit = {},
+    onSaveIdea: (String) -> Unit = {}
 ) {
 
 
@@ -68,6 +78,114 @@ fun HomeScreen(
         ),
         label = "home_dot_alpha"
     )
+
+    var ideaToDelete by remember { mutableStateOf<IdeaVaultEntity?>(null) }
+    var ideaToEdit by remember { mutableStateOf<IdeaVaultEntity?>(null) }
+    var editTitleText by remember { mutableStateOf("") }
+    var editPromptText by remember { mutableStateOf("") }
+
+    if (ideaToDelete != null) {
+        val target = ideaToDelete!!
+        AlertDialog(
+            onDismissRequest = { ideaToDelete = null },
+            title = {
+                Text(
+                    text = "Delete Idea?",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+            },
+            text = {
+                Text(
+                    text = "Are you sure you want to delete \"${target.title}\"? If this idea was already synced to your laptop, the deletion will also be communicated to the laptop backend.",
+                    color = OnSurfaceVariant,
+                    fontSize = 14.sp
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDeleteIdea(target.localId)
+                        ideaToDelete = null
+                    }
+                ) {
+                    Text("Delete", color = Color(0xFFEF4444), fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { ideaToDelete = null }) {
+                    Text("Cancel", color = OnSurfaceVariant)
+                }
+            },
+            containerColor = SurfaceContainerHigh
+        )
+    }
+
+    if (ideaToEdit != null) {
+        val target = ideaToEdit!!
+        AlertDialog(
+            onDismissRequest = { ideaToEdit = null },
+            title = {
+                Text(
+                    text = "Edit Idea",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = editTitleText,
+                        onValueChange = { editTitleText = it },
+                        label = { Text("Title") },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = PrimaryColor,
+                            unfocusedBorderColor = Color(0x33FFFFFF),
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = editPromptText,
+                        onValueChange = { editPromptText = it },
+                        label = { Text("Idea Description") },
+                        minLines = 3,
+                        maxLines = 6,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = PrimaryColor,
+                            unfocusedBorderColor = Color(0x33FFFFFF),
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onEditIdea(target.localId, editTitleText, editPromptText)
+                        ideaToEdit = null
+                    }
+                ) {
+                    Text("Save Changes", color = PrimaryColor, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { ideaToEdit = null }) {
+                    Text("Cancel", color = OnSurfaceVariant)
+                }
+            },
+            containerColor = SurfaceContainerHigh
+        )
+    }
 
     EmberBackground {
         Column(
@@ -535,216 +653,331 @@ fun HomeScreen(
                     }
                 }
 
-                // Active Agent Threads Section
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                // ── 2B. Persistent Idea Vault Section ─────────────────────────────
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = "ACTIVE AGENT THREADS",
-                            fontSize = 10.sp,
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold,
-                            color = OnSurfaceVariant,
-                            letterSpacing = 1.2.sp
-                        )
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(5.dp),
-                            modifier = Modifier.clickable { onMenuClick() }
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(6.dp)
-                                    .clip(CircleShape)
-                                    .background(SecondaryContainer)
+                            Icon(
+                                imageVector = Icons.Default.Inventory2,
+                                contentDescription = null,
+                                tint = PrimaryColor,
+                                modifier = Modifier.size(16.dp)
                             )
                             Text(
-                                text = "3 Running",
+                                text = "SAVED IDEAS (IDEA VAULT)",
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = SecondaryColor
+                                fontFamily = FontFamily.Monospace,
+                                fontWeight = FontWeight.Bold,
+                                color = OnSurfaceVariant,
+                                letterSpacing = 1.2.sp
                             )
                         }
-                    }
 
-                    // Vector-Sync Orchestrator Card
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(SurfaceContainerLow.copy(alpha = 0.9f))
-                            .border(1.dp, Color(0x1AFFFFFF), RoundedCornerShape(20.dp))
-                            .clickable { onNavigateTab("CHAT") }
-                            .padding(16.dp)
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                ) {
-                                    Box(
-                                        contentAlignment = Alignment.Center,
-                                        modifier = Modifier
-                                            .size(32.dp)
-                                            .clip(CircleShape)
-                                            .background(SurfaceContainerHigh)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.SmartToy,
-                                            contentDescription = null,
-                                            tint = PrimaryColor,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                    Column {
-                                        Text(
-                                            text = "Vector-Sync Orchestrator",
-                                            fontSize = 14.5.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = Color.White
-                                        )
-                                        Text(
-                                            text = "Job #0981 · 4,200 tok/sec",
-                                            fontSize = 11.sp,
-                                            fontFamily = FontFamily.Monospace,
-                                            color = OnSurfaceVariant
-                                        )
-                                    }
-                                }
-
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            val pendingCount = savedIdeas.count { it.syncStatus != IdeaSyncStatus.SYNCED }
+                            if (pendingCount > 0) {
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(50))
-                                        .background(PrimaryContainer.copy(alpha = 0.2f))
-                                        .padding(horizontal = 8.dp, vertical = 2.dp)
-                                ) {
-                                    Text(
-                                        text = "Active",
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = PrimaryColor
-                                    )
-                                }
-                            }
-
-                            // Inner Progress Pill
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(SurfaceContainerLowest.copy(alpha = 0.85f))
-                                    .padding(horizontal = 12.dp, vertical = 10.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                        modifier = Modifier.weight(1f)
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(6.dp)
-                                                .clip(CircleShape)
-                                                .background(PrimaryColor.copy(alpha = dotAlpha))
-                                        )
-                                        Text(
-                                            text = "Compiling recursive SNARK artifacts for mainnet...",
-                                            fontSize = 11.sp,
-                                            fontFamily = FontFamily.Monospace,
-                                            color = OnSurface,
-                                            maxLines = 1
-                                        )
-                                    }
-                                    Text(
-                                        text = "91%",
-                                        fontSize = 11.5.sp,
-                                        fontFamily = FontFamily.Monospace,
-                                        fontWeight = FontWeight.Bold,
-                                        color = PrimaryColor
-                                    )
-                                }
-                            }
-
-                            // Card Footer Stats
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                                        .background(SecondaryContainer.copy(alpha = 0.3f))
+                                        .border(1.dp, SecondaryColor.copy(alpha = 0.5f), RoundedCornerShape(50))
+                                        .clickable { onSyncAllIdeas() }
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
                                 ) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Default.Memory,
-                                            contentDescription = null,
-                                            tint = PrimaryColor,
-                                            modifier = Modifier.size(15.dp)
-                                        )
-                                        Text(
-                                            text = "1.4 GB",
-                                            fontSize = 11.sp,
-                                            fontFamily = FontFamily.Monospace,
-                                            color = OnSurfaceVariant
-                                        )
-                                    }
-
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.AltRoute,
-                                            contentDescription = null,
+                                            imageVector = Icons.Default.Sync,
+                                            contentDescription = "Sync All",
                                             tint = SecondaryColor,
-                                            modifier = Modifier.size(15.dp)
+                                            modifier = Modifier.size(12.dp)
                                         )
                                         Text(
-                                            text = "12 nodes",
-                                            fontSize = 11.sp,
-                                            fontFamily = FontFamily.Monospace,
-                                            color = OnSurfaceVariant
+                                            text = "Sync $pendingCount Pending",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = SecondaryColor
                                         )
                                     }
                                 }
+                            }
 
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(2.dp),
-                                    modifier = Modifier.clickable { onNavigateTab("CHAT") }
+                            Text(
+                                text = "${savedIdeas.size} Saved",
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.Monospace,
+                                color = OnSurfaceVariant
+                            )
+                        }
+                    }
+
+                    if (savedIdeas.isEmpty()) {
+                        // Sleek Empty State Card
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(SurfaceContainerLow.copy(alpha = 0.8f))
+                                .border(1.dp, Color(0x1AFFFFFF), RoundedCornerShape(16.dp))
+                                .padding(16.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Lightbulb,
+                                    contentDescription = null,
+                                    tint = PrimaryColor.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(28.dp)
+                                )
+                                Text(
+                                    text = "Your Idea Vault is empty",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = "Speak into the microphone or type below to capture an idea. Ideas are stored locally on your device immediately, surviving offline and app restarts.",
+                                    fontSize = 11.sp,
+                                    color = OnSurfaceVariant,
+                                    lineHeight = 15.sp,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                            }
+                        }
+                    } else {
+                        // Render ideas list
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            savedIdeas.forEach { idea ->
+                                val (statusLabel, statusColor) = when (idea.syncStatus) {
+                                    IdeaSyncStatus.SYNCED -> Pair("Synced", Color(0xFF22C55E))
+                                    IdeaSyncStatus.SYNCING -> Pair("Syncing...", Color(0xFF38BDF8))
+                                    IdeaSyncStatus.PENDING -> Pair("Offline Pending", Color(0xFFF59E0B))
+                                    IdeaSyncStatus.FAILED -> Pair("Sync Failed", Color(0xFFEF4444))
+                                }
+
+                                val formattedTime = try {
+                                    val sdf = SimpleDateFormat("MMM d, HH:mm", Locale.getDefault())
+                                    sdf.format(Date(idea.updatedAt))
+                                } catch (_: Exception) { "" }
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(SurfaceContainerLow.copy(alpha = 0.9f))
+                                        .border(
+                                            1.dp,
+                                            if (idea.syncStatus == IdeaSyncStatus.FAILED) Color(0x66EF4444) else Color(0x1AFFFFFF),
+                                            RoundedCornerShape(16.dp)
+                                        )
+                                        .clickable { onSelectIdea(idea) }
+                                        .padding(14.dp)
                                 ) {
-                                    Text(
-                                        text = "Inspect",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = PrimaryColor
-                                    )
-                                    Icon(
-                                        imageVector = Icons.Default.ArrowForward,
-                                        contentDescription = null,
-                                        tint = PrimaryColor,
-                                        modifier = Modifier.size(13.dp)
-                                    )
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        // Header Row: Title & Sync Status Badge
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = idea.title,
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = Color.White,
+                                                modifier = Modifier.weight(1f),
+                                                maxLines = 1
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(50))
+                                                    .background(statusColor.copy(alpha = 0.15f))
+                                                    .border(1.dp, statusColor.copy(alpha = 0.4f), RoundedCornerShape(50))
+                                                    .padding(horizontal = 7.dp, vertical = 2.dp)
+                                            ) {
+                                                Row(
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                ) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .size(5.dp)
+                                                            .clip(CircleShape)
+                                                            .background(statusColor)
+                                                    )
+                                                    Text(
+                                                        text = statusLabel,
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = statusColor
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        // Prompt Preview
+                                        Text(
+                                            text = idea.rawPrompt,
+                                            fontSize = 12.sp,
+                                            color = OnSurfaceVariant,
+                                            maxLines = 2,
+                                            lineHeight = 16.sp
+                                        )
+
+                                        // Error message if Failed
+                                        if (idea.syncStatus == IdeaSyncStatus.FAILED && !idea.syncErrorMessage.isNullOrBlank()) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .background(Color(0x22EF4444))
+                                                    .padding(horizontal = 8.dp, vertical = 5.dp)
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Text(
+                                                        text = "⚠ ${idea.syncErrorMessage}",
+                                                        fontSize = 10.sp,
+                                                        color = Color(0xFFFF8888),
+                                                        modifier = Modifier.weight(1f),
+                                                        maxLines = 1
+                                                    )
+                                                    Text(
+                                                        text = "Retry",
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = PrimaryColor,
+                                                        modifier = Modifier.clickable { onRetrySyncIdea(idea) }
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        // Footer Row: Metadata & Actions
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                Text(
+                                                    text = formattedTime,
+                                                    fontSize = 10.sp,
+                                                    fontFamily = FontFamily.Monospace,
+                                                    color = OnSurfaceVariant.copy(alpha = 0.7f)
+                                                )
+                                                if (idea.techStack != "auto") {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .clip(RoundedCornerShape(4.dp))
+                                                            .background(SurfaceContainerHighest)
+                                                            .padding(horizontal = 5.dp, vertical = 1.dp)
+                                                    ) {
+                                                        Text(
+                                                            text = idea.techStack,
+                                                            fontSize = 9.sp,
+                                                            fontFamily = FontFamily.Monospace,
+                                                            color = Color.White
+                                                        )
+                                                    }
+                                                }
+                                            }
+
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                            ) {
+                                                // Load into prompt
+                                                Box(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(6.dp))
+                                                        .clickable { onSelectIdea(idea) }
+                                                        .padding(horizontal = 6.dp, vertical = 6.dp)
+                                                ) {
+                                                    Row(
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                                    ) {
+                                                        Text(
+                                                            text = "Load",
+                                                            fontSize = 11.sp,
+                                                            fontWeight = FontWeight.Medium,
+                                                            color = PrimaryColor
+                                                        )
+                                                        Icon(
+                                                            imageVector = Icons.Default.ArrowForward,
+                                                            contentDescription = "Load",
+                                                            tint = PrimaryColor,
+                                                            modifier = Modifier.size(12.dp)
+                                                        )
+                                                    }
+                                                }
+
+                                                // Edit
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(32.dp)
+                                                        .clip(CircleShape)
+                                                        .clickable {
+                                                            editTitleText = idea.title
+                                                            editPromptText = idea.rawPrompt
+                                                            ideaToEdit = idea
+                                                        },
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Edit,
+                                                        contentDescription = "Edit Idea",
+                                                        tint = OnSurfaceVariant,
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                }
+
+                                                // Delete
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(32.dp)
+                                                        .clip(CircleShape)
+                                                        .clickable { ideaToDelete = idea },
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.DeleteOutline,
+                                                        contentDescription = "Delete Idea",
+                                                        tint = Color(0xFFEF4444).copy(alpha = 0.8f),
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
+                }
 
                     // Secondary Visual Telemetry Panel (2 Columns)
                     Row(
@@ -1005,12 +1238,12 @@ fun HomeScreen(
                                         .background(SurfaceContainerHighest.copy(alpha = 0.6f))
                                         .clickable {
                                             val textToSend = if (promptText.isNotBlank()) promptText else "Deploy an autonomous AI agent to monitor liquidity pools. Make it a tactical trading bot."
-                                            onPresetSelect(textToSend)
+                                            onSaveIdea(textToSend)
                                         }
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.ArrowUpward,
-                                        contentDescription = "Send",
+                                        contentDescription = "Save Idea",
                                         tint = PrimaryColor,
                                         modifier = Modifier.size(19.dp)
                                     )
@@ -1072,4 +1305,3 @@ fun HomeScreen(
             }
         }
     }
-}

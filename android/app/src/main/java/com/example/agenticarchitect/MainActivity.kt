@@ -41,7 +41,11 @@ import com.example.agenticarchitect.data.remote.PushResponse
 import com.example.agenticarchitect.data.remote.EnvironmentDetectionResponse
 import com.example.agenticarchitect.data.remote.SetupPlanResponse
 import com.example.agenticarchitect.data.remote.SetupStatusResponse
+import com.example.agenticarchitect.data.local.IdeaSyncStatus
+import com.example.agenticarchitect.data.local.IdeaVaultEntity
+import com.example.agenticarchitect.data.local.IdeaVaultRepository
 import com.example.agenticarchitect.data.remote.IdeaRecordItem
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.agenticarchitect.theme.DarkObsidian
 import com.example.agenticarchitect.theme.EmberOrangePrimary
 import com.example.agenticarchitect.ui.screens.ChatExecutionScreen
@@ -143,6 +147,9 @@ fun AgenticArchitectApp() {
     var pushResponse by remember { mutableStateOf<PushResponse?>(null) }
 
     // Phase 3 & 4: Environment Setup Agent & Idea Vault State
+    val ideaVaultRepo = remember { IdeaVaultRepository.getInstance(context, laptopRepository) }
+    val savedIdeas by ideaVaultRepo.getAllIdeas().collectAsStateWithLifecycle(initialValue = emptyList())
+
     var environmentDetection by remember { mutableStateOf<EnvironmentDetectionResponse?>(null) }
     var isDetectingEnvironment by remember { mutableStateOf(false) }
     var activeIdea by remember { mutableStateOf<IdeaRecordItem?>(null) }
@@ -152,6 +159,56 @@ fun AgenticArchitectApp() {
     var setupStatus by remember { mutableStateOf<SetupStatusResponse?>(null) }
     var isExecutingSetup by remember { mutableStateOf(false) }
     var setupPollingJob by remember { mutableStateOf<Job?>(null) }
+
+    fun captureIdeaLocally(prompt: String, title: String? = null) {
+        val clean = prompt.trim()
+        if (clean.isBlank()) return
+        coroutineScope.launch {
+            val entity = ideaVaultRepo.captureIdea(prompt = clean, title = title)
+            Toast.makeText(context, "Idea saved locally: ${entity.title}", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun updateIdeaLocally(localId: String, title: String, prompt: String) {
+        coroutineScope.launch {
+            val updated = ideaVaultRepo.updateIdea(localId = localId, prompt = prompt, title = title)
+            if (updated != null) {
+                Toast.makeText(context, "Idea updated: ${updated.title}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    fun deleteIdeaLocally(localId: String) {
+        coroutineScope.launch {
+            val ok = ideaVaultRepo.deleteIdea(localId)
+            if (ok) {
+                Toast.makeText(context, "Idea removed", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    fun retrySyncIdea(idea: IdeaVaultEntity) {
+        coroutineScope.launch {
+            Toast.makeText(context, "Retrying sync to laptop...", Toast.LENGTH_SHORT).show()
+            val ok = ideaVaultRepo.syncSingleIdea(idea)
+            if (ok) {
+                Toast.makeText(context, "✓ Idea synced to laptop!", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "Sync failed. Will retry when connected.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    fun syncAllPendingIdeas() {
+        coroutineScope.launch {
+            val res = ideaVaultRepo.syncAllPending()
+            if (res.totalPending == 0) {
+                Toast.makeText(context, "All ideas are up to date.", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "Synced ${res.syncedCount}/${res.totalPending} ideas.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     fun detectHostEnvironment() {
         isDetectingEnvironment = true
@@ -495,6 +552,9 @@ fun AgenticArchitectApp() {
         }
         // Auto-discover laptop bridge on shared Wi-Fi
         connectionInfo = laptopRepository.checkConnection()
+        if (connectionInfo.state == ConnectionState.CONNECTED) {
+            ideaVaultRepo.syncAllPending()
+        }
         // Check GitHub status in background
         val ghRes = laptopRepository.getGitHubStatus()
         ghRes.onSuccess { gitHubStatus = it }
@@ -616,6 +676,7 @@ fun AgenticArchitectApp() {
             connectionInfo = info
             if (info.state == ConnectionState.CONNECTED) {
                 Toast.makeText(context, "Connected to laptop at ${info.endpointUrl}", Toast.LENGTH_SHORT).show()
+                ideaVaultRepo.syncAllPending()
             } else {
                 Toast.makeText(context, "Laptop not found on Wi-Fi. Check bridge terminal.", Toast.LENGTH_SHORT).show()
             }
@@ -646,6 +707,7 @@ fun AgenticArchitectApp() {
                 onMicClick = { startListeningFlow() },
                 onPresetSelect = { selectedPrompt ->
                     promptText = selectedPrompt
+                    captureIdeaLocally(selectedPrompt)
                     executeNpuInference()
                 },
                 onNavigateTab = { tab ->
@@ -690,6 +752,27 @@ fun AgenticArchitectApp() {
                         currentScreen = ScreenState.GITHUB_REPOS
                         refreshGitHub(fetchRepos = true)
                     }
+                },
+                savedIdeas = savedIdeas,
+                onSelectIdea = { idea ->
+                    promptText = idea.rawPrompt
+                    Toast.makeText(context, "Loaded into prompt: ${idea.title}", Toast.LENGTH_SHORT).show()
+                },
+                onEditIdea = { localId, newTitle, newPrompt ->
+                    updateIdeaLocally(localId, newTitle, newPrompt)
+                },
+                onDeleteIdea = { localId ->
+                    deleteIdeaLocally(localId)
+                },
+                onRetrySyncIdea = { idea ->
+                    retrySyncIdea(idea)
+                },
+                onSyncAllIdeas = {
+                    syncAllPendingIdeas()
+                },
+                onSaveIdea = { text ->
+                    captureIdeaLocally(text)
+                    promptText = ""
                 }
             )
 
@@ -717,6 +800,9 @@ fun AgenticArchitectApp() {
                     }
                 },
                 onSendClick = {
+                    if (promptText.isNotBlank()) {
+                        captureIdeaLocally(promptText)
+                    }
                     executeNpuInference()
                 },
                 onSamplePromptSelect = { sample ->

@@ -134,9 +134,10 @@ class IdeaManager:
         self,
         prompt: str,
         title: Optional[str] = None,
-        tech_stack: Optional[str] = None
+        tech_stack: Optional[str] = None,
+        idea_id: Optional[str] = None
     ) -> IdeaRecord:
-        """Captures a new user idea permanently."""
+        """Captures a new user idea permanently. If idea_id is provided, uses it idempotently."""
         clean_prompt = prompt.strip()
         if not clean_prompt:
             raise ValueError("Idea prompt cannot be empty.")
@@ -144,24 +145,40 @@ class IdeaManager:
         with self._lock:
             reg = self._read_registry()
 
+            # If idea_id provided and already exists, update prompt/title idempotently
+            if idea_id and idea_id in reg:
+                record = IdeaRecord.from_dict(reg[idea_id])
+                record.raw_prompt = clean_prompt
+                if title and title.strip():
+                    record.title = title.strip()
+                if tech_stack and tech_stack != "auto":
+                    record.tech_stack = tech_stack
+                record.updated_at = datetime.now(timezone.utc).isoformat()
+                reg[idea_id] = record.to_dict()
+                self._write_registry(reg)
+                return record
+
             # Derive title and id
             derived_title = title.strip() if title and title.strip() else ""
             if not derived_title:
                 words = re.findall(r"[a-zA-Z0-9]+", clean_prompt)
                 derived_title = " ".join(words[:5]).title() if words else "New Idea"
 
-            base_id = sanitize_idea_id(derived_title)
-            idea_id = base_id
-            counter = 2
-            while idea_id in reg:
-                idea_id = f"{base_id}-{counter}"
-                counter += 1
+            if idea_id:
+                final_id = sanitize_idea_id(idea_id)
+            else:
+                base_id = sanitize_idea_id(derived_title)
+                final_id = base_id
+                counter = 2
+                while final_id in reg:
+                    final_id = f"{base_id}-{counter}"
+                    counter += 1
 
             now = datetime.now(timezone.utc).isoformat()
             detected_stack = tech_stack or self.detect_recommended_stack(clean_prompt)
 
             record = IdeaRecord(
-                idea_id=idea_id,
+                idea_id=final_id,
                 title=derived_title,
                 raw_prompt=clean_prompt,
                 created_at=now,
@@ -170,9 +187,43 @@ class IdeaManager:
                 tech_stack=detected_stack
             )
 
+            reg[final_id] = record.to_dict()
+            self._write_registry(reg)
+            return record
+
+    def update_idea(
+        self,
+        idea_id: str,
+        prompt: Optional[str] = None,
+        title: Optional[str] = None,
+        tech_stack: Optional[str] = None
+    ) -> IdeaRecord:
+        """Updates an existing idea's prompt, title, or tech_stack."""
+        with self._lock:
+            reg = self._read_registry()
+            if idea_id not in reg:
+                raise KeyError(f"Idea '{idea_id}' not found.")
+            record = IdeaRecord.from_dict(reg[idea_id])
+            if prompt is not None and prompt.strip():
+                record.raw_prompt = prompt.strip()
+            if title is not None and title.strip():
+                record.title = title.strip()
+            if tech_stack is not None and tech_stack.strip():
+                record.tech_stack = tech_stack.strip()
+            record.updated_at = datetime.now(timezone.utc).isoformat()
             reg[idea_id] = record.to_dict()
             self._write_registry(reg)
             return record
+
+    def delete_idea(self, idea_id: str) -> bool:
+        """Deletes an idea from persistent storage."""
+        with self._lock:
+            reg = self._read_registry()
+            if idea_id in reg:
+                del reg[idea_id]
+                self._write_registry(reg)
+                return True
+            return False
 
     def get_idea(self, idea_id: str) -> Optional[IdeaRecord]:
         with self._lock:

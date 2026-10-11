@@ -5,22 +5,25 @@ import com.example.agenticarchitect.generator.MobilePromptIngestionResult
 import com.example.agenticarchitect.generator.NpuInferenceTelemetry
 
 /**
- * Qualcomm GenieX SDK Native Snapdragon NPU Interface
+ * Offline Heuristic Fallback Engine (Rule-based Prompt Analyzer)
  *
- * Runs quantized Qwen 2.5-Coder / Phi-4-Mini directly on the Qualcomm Hexagon NPU
- * with INT4 quantization, zero cloud latency, and grammar-constrained decoding.
+ * Provides instant, zero-latency template estimation when the laptop AI backend
+ * is unreachable. Analyzes prompt keywords deterministically to scaffold
+ * initial architecture configs without requiring cloud egress.
+ * Note: Generative brainstorming is executed via the primary Laptop Ollama AI bridge.
  */
 class QualcommGenieXNpuEngine {
 
     companion object {
-        const val MODEL_QWEN_7B = "Qwen2.5-Coder-7B-Instruct-INT4"
-        const val MODEL_QWEN_1_5B = "Qwen2.5-Coder-1.5B-Instruct-INT4"
-        const val MODEL_PHI_4 = "Phi-4-Mini-3.8B-Instruct-INT4"
-        const val MODEL_OPUS_4 = "Opus-4.0-Architect-Engine"
+        const val MODEL_RULE_HEURISTIC = "Rule-based Architecture Engine"
+        const val MODEL_QWEN_7B = "Rule-based Engine (Qwen Preset)"
+        const val MODEL_QWEN_1_5B = "Rule-based Engine (Fast Preset)"
+        const val MODEL_PHI_4 = "Rule-based Engine (Phi Preset)"
+        const val MODEL_OPUS_4 = "Rule-based Engine (Fullstack Preset)"
     }
 
     /**
-     * Executes offline on-device inference via Qualcomm GenieX SDK.
+     * Executes deterministic rule-based template generation for offline mobile use.
      */
     fun inferProjectFromPrompt(
         prompt: String,

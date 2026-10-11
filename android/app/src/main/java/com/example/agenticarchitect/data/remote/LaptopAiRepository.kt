@@ -110,7 +110,7 @@ class LaptopBridgeException(
  * 4. Existing ADB reverse fallback (http://localhost:8000)
  * 5. Android emulator fallback (http://10.0.2.2:8000)
  */
-class LaptopAiRepository(
+open class LaptopAiRepository(
     private val context: Context? = null,
     initialBaseUrl: String = ""
 ) {
@@ -1885,6 +1885,13 @@ class LaptopAiRepository(
         prompt: String,
         title: String? = null,
         techStack: String? = null
+    ): Result<IdeaItem> = captureIdeaWithCustomId(prompt, title, techStack, null)
+
+    open suspend fun captureIdeaWithCustomId(
+        prompt: String,
+        title: String? = null,
+        techStack: String? = null,
+        ideaId: String? = null
     ): Result<IdeaItem> = withContext(Dispatchers.IO) {
         var lastException: Exception? = null
         for (targetUrl in candidateUrls) {
@@ -1902,6 +1909,7 @@ class LaptopAiRepository(
                     put("prompt", prompt)
                     if (title != null) put("title", title)
                     if (techStack != null) put("tech_stack", techStack)
+                    if (ideaId != null) put("idea_id", ideaId)
                 }
                 OutputStreamWriter(connection.outputStream).use { it.write(payload.toString()) }
 
@@ -1912,7 +1920,7 @@ class LaptopAiRepository(
                     val ideaJson = json.optJSONObject("idea") ?: JSONObject()
                     return@withContext Result.success(
                         IdeaItem(
-                            idea_id = ideaJson.optString("idea_id", ""),
+                            idea_id = ideaJson.optString("idea_id", ideaId ?: ""),
                             title = ideaJson.optString("title", "New Idea"),
                             raw_prompt = ideaJson.optString("raw_prompt", prompt),
                             created_at = ideaJson.optString("created_at", ""),
@@ -1929,6 +1937,79 @@ class LaptopAiRepository(
             }
         }
         Result.failure(Exception(lastException?.message ?: "Failed to capture idea on laptop"))
+    }
+
+    open suspend fun updateIdeaOnLaptop(
+        ideaId: String,
+        prompt: String? = null,
+        title: String? = null,
+        techStack: String? = null
+    ): Result<IdeaItem> = withContext(Dispatchers.IO) {
+        var lastException: Exception? = null
+        for (targetUrl in candidateUrls) {
+            try {
+                val endpointUrl = URL("$targetUrl/api/ideas/$ideaId")
+                val connection = (endpointUrl.openConnection() as HttpURLConnection).apply {
+                    requestMethod = "PUT"
+                    setRequestProperty("Content-Type", "application/json")
+                    setRequestProperty("Accept", "application/json")
+                    doOutput = true
+                    connectTimeout = 4000
+                    readTimeout = 8000
+                }
+                val payload = JSONObject().apply {
+                    if (prompt != null) put("prompt", prompt)
+                    if (title != null) put("title", title)
+                    if (techStack != null) put("tech_stack", techStack)
+                }
+                OutputStreamWriter(connection.outputStream).use { it.write(payload.toString()) }
+
+                val responseCode = connection.responseCode
+                if (responseCode in 200..299) {
+                    val respText = connection.inputStream.bufferedReader().use { it.readText() }
+                    val json = JSONObject(respText)
+                    val ideaJson = json.optJSONObject("idea") ?: JSONObject()
+                    return@withContext Result.success(
+                        IdeaItem(
+                            idea_id = ideaJson.optString("idea_id", ideaId),
+                            title = ideaJson.optString("title", ""),
+                            raw_prompt = ideaJson.optString("raw_prompt", ""),
+                            created_at = ideaJson.optString("created_at", ""),
+                            status = ideaJson.optString("status", "captured"),
+                            tech_stack = ideaJson.optString("tech_stack", "auto")
+                        )
+                    )
+                } else {
+                    val errText = connection.errorStream?.bufferedReader()?.use { it.readText() }
+                    return@withContext Result.failure(Exception(extractErrorMessage(errText, responseCode)))
+                }
+            } catch (e: Exception) {
+                lastException = e
+            }
+        }
+        Result.failure(Exception(lastException?.message ?: "Failed to update idea on laptop"))
+    }
+
+    open suspend fun deleteIdeaOnLaptop(ideaId: String): Result<Boolean> = withContext(Dispatchers.IO) {
+        var lastException: Exception? = null
+        for (targetUrl in candidateUrls) {
+            try {
+                val endpointUrl = URL("$targetUrl/api/ideas/$ideaId")
+                val connection = (endpointUrl.openConnection() as HttpURLConnection).apply {
+                    requestMethod = "DELETE"
+                    setRequestProperty("Accept", "application/json")
+                    connectTimeout = 3000
+                    readTimeout = 5000
+                }
+                val responseCode = connection.responseCode
+                if (responseCode in 200..299) {
+                    return@withContext Result.success(true)
+                }
+            } catch (e: Exception) {
+                lastException = e
+            }
+        }
+        Result.failure(Exception(lastException?.message ?: "Failed to delete idea on laptop"))
     }
 
     suspend fun refineIdea(ideaId: String): Result<IdeaItem> = withContext(Dispatchers.IO) {

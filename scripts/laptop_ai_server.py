@@ -1648,6 +1648,12 @@ class CaptureIdeaRequest(BaseModel):
     prompt: str = Field(..., description="Idea description")
     title: Optional[str] = Field(default=None)
     tech_stack: Optional[str] = Field(default=None)
+    idea_id: Optional[str] = Field(default=None, description="Optional client-side unique ID for idempotent sync")
+
+class UpdateIdeaRequest(BaseModel):
+    prompt: Optional[str] = Field(default=None)
+    title: Optional[str] = Field(default=None)
+    tech_stack: Optional[str] = Field(default=None)
 
 class RefineIdeaRequest(BaseModel):
     blueprint: Optional[Dict[str, Any]] = None
@@ -1819,7 +1825,8 @@ async def capture_user_idea(req: CaptureIdeaRequest):
         record = idea_manager.capture_idea(
             prompt=clean_prompt,
             title=req.title,
-            tech_stack=req.tech_stack
+            tech_stack=req.tech_stack,
+            idea_id=req.idea_id
         )
         return {
             "success": True,
@@ -1855,6 +1862,48 @@ async def get_user_idea(idea_id: str):
     return {
         "success": True,
         "idea": idea.to_dict()
+    }
+
+
+@app.put("/api/ideas/{idea_id}")
+async def update_user_idea(idea_id: str, req: UpdateIdeaRequest):
+    """Updates an existing idea's content, title, or tech_stack."""
+    try:
+        record = idea_manager.update_idea(
+            idea_id=idea_id,
+            prompt=req.prompt,
+            title=req.title,
+            tech_stack=req.tech_stack
+        )
+        return {
+            "success": True,
+            "idea": record.to_dict()
+        }
+    except KeyError:
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"success": False, "error": {"code": "IDEA_NOT_FOUND", "message": f"Idea '{idea_id}' not found."}}
+        )
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"success": False, "error": {"code": "IDEA_UPDATE_FAILED", "message": str(e)}}
+        )
+
+
+@app.delete("/api/ideas/{idea_id}")
+async def delete_user_idea(idea_id: str):
+    """Deletes an idea from persistent storage."""
+    deleted = idea_manager.delete_idea(idea_id)
+    if not deleted:
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"success": False, "error": {"code": "IDEA_NOT_FOUND", "message": f"Idea '{idea_id}' not found."}}
+        )
+    return {
+        "success": True,
+        "deleted": True,
+        "idea_id": idea_id
     }
 
 
