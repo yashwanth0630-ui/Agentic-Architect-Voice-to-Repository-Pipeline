@@ -15,6 +15,8 @@ import {
 } from '../generator/generator.js';
 import { defaultNpuEngine, SnapdragonModel } from '../core/npu.js';
 import exportRouter from './export.js';
+import ideaBeaconWebRouter from './ideaBeaconWeb.js';
+import fs from 'fs';
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -135,15 +137,29 @@ app.get('/api/internal/status', (req: Request, res: Response) => {
 // Green Light Desktop Handoff — zip export pipeline
 app.use('/api', exportRouter);
 
-// Static Web Console & Pitch Deck Delivery
+// Idea Beacon Web UI Adapter routes
+app.use('/api', ideaBeaconWebRouter);
+
+// Static Web Console, Web UI & Pitch Deck Delivery
 const projectRoot = process.cwd();
 const publicDir = path.join(projectRoot, 'public');
+const webDistDir = path.join(projectRoot, 'web', 'dist');
 
-app.use(express.static(publicDir));
+if (fs.existsSync(webDistDir)) {
+  app.use(express.static(webDistDir, { index: false }));
+}
+app.use(express.static(publicDir, { index: false }));
 
 app.get('/pitch-deck.pdf', (req: Request, res: Response) => {
   const pdfPath = path.join(projectRoot, 'Agentic_Architect_Pitch_Deck.pdf');
   res.sendFile(pdfPath);
+});
+
+app.get('/app', (req: Request, res: Response) => {
+  if (fs.existsSync(path.join(webDistDir, 'index.html'))) {
+    return res.sendFile(path.join(webDistDir, 'index.html'));
+  }
+  res.sendFile(path.join(publicDir, 'index.html'));
 });
 
 app.get('/', (req: Request, res: Response) => {

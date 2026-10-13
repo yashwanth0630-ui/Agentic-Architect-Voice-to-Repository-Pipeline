@@ -22,8 +22,14 @@ __pycache__/
 scratch/*.png
 scratch/*.xml
 scratch/*.log
+scratch/idea-beacon-source/
 
 # External Sub-Repositories & Test Output
 OpenMontage/
 injected_agents/
 projects/
+
+# Web Frontend
+web/node_modules/
+web/dist/
+web/.env

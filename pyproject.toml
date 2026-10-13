@@ -14,3 +14,7 @@ extraPaths = [
 venvPath = "."
 venv = ".venv"
 pythonVersion = "3.12"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = ["OpenMontage", "node_modules", ".venv", "projects", "scratch"]
